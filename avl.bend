@@ -71,27 +71,27 @@ def Avl.cmp(x, y):
         case Avl/Node:
           return 1
     case Avl/Node:
-      open Dual: x.key
-      return Avl.sign(x.key.approx, x.key.exact, y)
+      return Avl.sign(x.key, y)
 
 def Avl.close(approx0, approx1):
   return approx0 - approx1 < 0.00001
 
-def Avl.sign(approx, exact, y):
+def Avl.sign(key, y):
+  open Dual: key
   match y:
     case Avl/Leaf:
       return -1
     case Avl/Node:
       open Dual: y.key
-      if Avl.close(approx, y.key.approx):
-        if exact == y.key.exact:
+      if Avl.close(key.approx, y.key.approx):
+        if key.exact == y.key.exact:
           return 0
-        elif exact > y.key.exact:
+        elif key.exact > y.key.exact:
           return 1
         else:
           return -1
       else:
-        if approx > y.key.approx:
+        if key.approx > y.key.approx:
           return 1
         else:
           return -1
@@ -131,6 +131,21 @@ def Avl.empty(x):
         case Avl/Node:
           return 0
 
+def Avl.branchless(x):
+  match x:
+    case Avl/Leaf:
+      return 1
+    case Avl/Node:
+      match x.left:
+        case Avl/Leaf:
+          return 1
+        case Avl/Node:
+          match x.right:
+            case Avl/Leaf:
+              return 1
+            case Avl/Node:
+              return 0
+
 def Avl.concat(rtl, ltr):
   match ltr:
     case String/Nil:
@@ -164,26 +179,106 @@ def Avl.walk(x, rtl, prefix, ltr):
         case _:
           return rtl
 
-def Avl.pre_balance(x, cond, balance):
+def Avl.pre_balance(x, balance):
   match x:
     case Avl/Leaf:
       return x
     case Avl/Node:
-      if cond:
-        if balance == 1:
-          return Avl.create(x.key, Avl.rotate_left(x.left), x.right)
-        else:
-          return Avl.create(x.key, x.left, Avl.rotate_right(x.right))
+      if balance == 1:
+        return Avl.create(x.key, Avl.rotate_left(x.left), x.right)
+      elif balance == -1:
+        return Avl.create(x.key, x.left, Avl.rotate_right(x.right))
       else:
         return x
 
 def Avl.re_balance(x, balance):
-  if balance == 0:
-    return x
+  if balance == -1:
+    return Avl.rotate_left(x)
   elif balance == 1:
     return Avl.rotate_right(x)
   else:
-    return Avl.rotate_left(x)
+    return x
+
+def Avl.l1ge2(x):
+  if x >= 2:
+    return 1
+  elif x <= -2:
+    return -1
+  else:
+    return 0
+
+def insert(node, key):
+  match node:
+    case Avl/Leaf:
+      return Avl/Leaf.create(key)
+    case Avl/Node:
+      switch Avl.sign(key, node):
+        case -1:
+          node = Avl.create(key, Avl.insert(node.left, key), node.right)
+        case 1:
+          node = Avl.create(key, node.left, Avl.insert(node.right, key))
+        case 0:
+          return node
+
+      balance = Avl.l1ge2(Avl.balance(node))
+      if balance == 0:
+        side = 1
+      else:
+        if balance == 1:
+          vs = node.left
+        else:
+          vs = node.right
+        side = Avl.sign(node, vs)
+      if balance == side:
+        node = Avl.pre_balance(node, balance)
+      else:
+        node = node
+      return Avl.re_balance(node, balance)
+
+def Avl.successor(root, prev):
+  match root:
+    case Avl/Leaf:
+      return prev
+    case Avl/Node:
+      return Avl.successor(root.left, root.key)
+
+def Avl.remove(root, key):
+  match root:
+    case Avl/Leaf:
+      return root
+    case Avl/Node:
+      side = Avl.sign(key, root)
+      if side == -1:
+        root = Avl.create(root.key, Avl.remove(root.left, key), root.right)
+      elif side == 1:
+        root = Avl.create(root.key, root.left, Avl.remove(root.right, key))
+      elif Avl.branchless(root):
+        match root.left:
+          case Avl/Leaf:
+            root = root.right
+          case Avl/Node:
+            root = root.left
+      else:
+        nxt = Avl.successor(root.right, root.key)
+        root = Avl.create(nxt, root.left, Avl.remove(root.right, nxt))
+  match root:
+    case Avl/Leaf:
+      return root
+    case Avl/Node:
+      balance = Avl.l1ge2(Avl.balance(root))
+      if balance == 0:
+        double = 0
+      else:
+        if balance == 1:
+          side = Avl.balance(root.left)
+        else:
+          side = Avl.balance(root.right)
+        double = Avl.l1ge2(balance - side)
+      if double:
+        root = root.pre_balance(root, balance)
+      else:
+        root = root
+      return root.re_balance(root, balance)
 
 def main():
   x = Avl.create(Dual(0.0, 1), Avl.create(Dual(0.0, 2), Avl/Leaf.create(Dual(0.0, 3)), Avl/Leaf.create(Dual(0.0, 4))),
