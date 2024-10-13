@@ -207,33 +207,34 @@ def Avl.l1ge2(x):
   else:
     return 0
 
-def insert(node, key):
+def Avl.insert(node, key):
   match node:
     case Avl/Leaf:
       return Avl/Leaf.create(key)
     case Avl/Node:
-      switch Avl.sign(key, node):
-        case -1:
-          node = Avl.create(key, Avl.insert(node.left, key), node.right)
-        case 1:
-          node = Avl.create(key, node.left, Avl.insert(node.right, key))
-        case 0:
-          return node
-
-      balance = Avl.l1ge2(Avl.balance(node))
-      if balance == 0:
-        side = 1
+      sign = Avl.sign(key, node)
+      if sign == 0:
+        return node
       else:
-        if balance == 1:
-          vs = node.left
+        if sign == 1:
+          node = Avl.create(node.key, node.left, Avl.insert(node.right, key))
         else:
-          vs = node.right
-        side = Avl.sign(node, vs)
-      if balance == side:
-        node = Avl.pre_balance(node, balance)
-      else:
-        node = node
-      return Avl.re_balance(node, balance)
+          node = Avl.create(node.key, Avl.insert(node.left, key), node.right)
+
+        balance = Avl.l1ge2(Avl.balance(node))
+        if balance == 0:
+          side = 1
+        else:
+          if balance == 1:
+            vs = node.left
+          else:
+            vs = node.right
+          side = Avl.sign(node, vs)
+        if balance == side:
+          node = Avl.pre_balance(node, balance)
+        else:
+          node = node
+        return Avl.re_balance(node, balance)
 
 def Avl.successor(root, prev):
   match root:
@@ -261,28 +262,33 @@ def Avl.remove(root, key):
       else:
         nxt = Avl.successor(root.right, root.key)
         root = Avl.create(nxt, root.left, Avl.remove(root.right, nxt))
-  match root:
-    case Avl/Leaf:
-      return root
-    case Avl/Node:
-      balance = Avl.l1ge2(Avl.balance(root))
-      if balance == 0:
-        double = 0
-      else:
-        if balance == 1:
-          side = Avl.balance(root.left)
-        else:
-          side = Avl.balance(root.right)
-        double = Avl.l1ge2(balance - side)
-      if double:
-        root = root.pre_balance(root, balance)
-      else:
-        root = root
-      return root.re_balance(root, balance)
+      match root:
+        case Avl/Leaf:
+          return root
+        case Avl/Node:
+          balance = Avl.l1ge2(Avl.balance(root))
+          if balance == 0:
+            double = 0
+          else:
+            if balance == 1:
+              side = Avl.balance(root.left)
+            else:
+              side = Avl.balance(root.right)
+            double = Avl.l1ge2(balance - side)
+          if double:
+            root = Avl.pre_balance(root, balance)
+          else:
+            root = root
+          return Avl.re_balance(root, balance)
 
 def main():
-  x = Avl.create(Dual(0.0, 1), Avl.create(Dual(0.0, 2), Avl/Leaf.create(Dual(0.0, 3)), Avl/Leaf.create(Dual(0.0, 4))),
-      Avl.create(Dual(0.0, 5), Avl/Leaf.create(Dual(0.0, 6)), Avl/Leaf.create(Dual(0.0, 7))))
+  root = Avl/Leaf()
+  root = Avl.insert(root, Dual(0.0, 10))
+  root = Avl.insert(root, Dual(0.0, 20))
+  root = Avl.insert(root, Dual(0.0, 30))
+  root = Avl.insert(root, Dual(0.0, 40))
+  root = Avl.insert(root, Dual(0.0, 50))
+  #root = Avl.insert(root, Dual(0.0, 25))
   with IO:
-    * <- IO/print(Avl.repr(x))
+    * <- IO/print(Avl.repr(root))
     return *
