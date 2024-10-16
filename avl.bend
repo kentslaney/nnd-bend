@@ -23,17 +23,17 @@ def Avl.depth(x):
     case Avl/Node:
       return x.height
     case Avl/Leaf:
-      return 0
+      return +0
 
 def Avl.balance(x):
   match x:
     case Avl/Node:
       return Avl.depth(x.left) - Avl.depth(x.right)
     case Avl/Leaf:
-      return 0
+      return +0
 
 def Avl.create(key, l, r):
-  return Avl/Node(key, 1 + max(Avl.depth(l), Avl.depth(r)), l, r)
+  return Avl/Node(key, +1 + max(Avl.depth(l), Avl.depth(r)), l, r)
 
 def Avl/Leaf.create(key):
   return Avl.create(key, Avl/Leaf, Avl/Leaf)
@@ -85,14 +85,14 @@ def Avl.sign(key, y):
       open Dual: y.key
       if Avl.close(key.approx, y.key.approx):
         if key.exact == y.key.exact:
-          return 0
+          return +0
         elif key.exact > y.key.exact:
-          return 1
+          return +1
         else:
           return -1
       else:
         if key.approx > y.key.approx:
-          return 1
+          return +1
         else:
           return -1
 
@@ -104,17 +104,19 @@ def Avl.sum(x):
       return x.key + Avl.sum(x.left) + Avl.sum(x.right)
 
 def Avl.repr(x):
-  return Avl.walk(x, String/Nil, 0, String/Nil)
+  return Avl.walk(x, String/Nil, +0, String/Nil)
 
 def Avl.repr_int(rtl, key):
-  if key >= 10:
+  if key < +0:
+    return String/Cons('-', Avl.repr_int(rtl, -1 * key))
+  elif key >= 10:
     return Avl.repr_int(String/Cons((key % 10) + 48, rtl), key / 10)
   else:
     return String/Cons(key + 48, rtl)
 
-def Avl.repr_key(rtl, key):
+def Avl.repr_key(rtl, key, height):
   open Dual: key
-  return Avl.repr_int(rtl, key.exact)
+  return Avl.repr_int(String/Cons(' ', Avl.repr_int(rtl, height)), key.exact)
 
 def Avl.empty(x):
   match x:
@@ -160,13 +162,13 @@ def Avl.walk(x, rtl, prefix, ltr):
     case Avl/Node:
       if Avl.empty(x):
         rtl = String/Cons('\n', rtl)
-        rtl = Avl.repr_key(rtl, x.key)
+        rtl = Avl.repr_key(rtl, x.key, x.height)
         rtl = String/Cons('\u{2500}', rtl)
       else:
         rtl = Avl.walk(x.right, rtl, '\u{2514}', String/Cons(' ', ltr))
         rtl = Avl.walk(x.left, rtl, '\u{251C}', String/Cons('\u{2502}', ltr))
         rtl = String/Cons('\n', rtl)
-        rtl = Avl.repr_key(rtl, x.key)
+        rtl = Avl.repr_key(rtl, x.key, x.height)
         rtl = String/Cons('\u{252C}', rtl)
       switch prefix:
         case 0:
@@ -184,7 +186,7 @@ def Avl.pre_balance(x, balance):
     case Avl/Leaf:
       return x
     case Avl/Node:
-      if balance == 1:
+      if balance == +1:
         return Avl.create(x.key, Avl.rotate_left(x.left), x.right)
       elif balance == -1:
         return Avl.create(x.key, x.left, Avl.rotate_right(x.right))
@@ -194,18 +196,18 @@ def Avl.pre_balance(x, balance):
 def Avl.re_balance(x, balance):
   if balance == -1:
     return Avl.rotate_left(x)
-  elif balance == 1:
+  elif balance == +1:
     return Avl.rotate_right(x)
   else:
     return x
 
 def Avl.l1ge2(x):
-  if x >= 2:
-    return 1
+  if x >= +2:
+    return +1
   elif x <= -2:
     return -1
   else:
-    return 0
+    return +0
 
 def Avl.insert(node, key):
   match node:
@@ -213,23 +215,23 @@ def Avl.insert(node, key):
       return Avl/Leaf.create(key)
     case Avl/Node:
       sign = Avl.sign(key, node)
-      if sign == 0:
+      if sign == +0:
         return node
       else:
-        if sign == 1:
+        if sign == +1:
           node = Avl.create(node.key, node.left, Avl.insert(node.right, key))
         else:
           node = Avl.create(node.key, Avl.insert(node.left, key), node.right)
 
         balance = Avl.l1ge2(Avl.balance(node))
-        if balance == 0:
-          side = 1
+        if balance == +0:
+          side = +1
         else:
-          if balance == 1:
+          if balance == +1:
             vs = node.left
           else:
             vs = node.right
-          side = Avl.sign(node, vs)
+          side = Avl.cmp(node, vs)
         if balance == side:
           node = Avl.pre_balance(node, balance)
         else:
@@ -251,7 +253,7 @@ def Avl.remove(root, key):
       side = Avl.sign(key, root)
       if side == -1:
         root = Avl.create(root.key, Avl.remove(root.left, key), root.right)
-      elif side == 1:
+      elif side == +1:
         root = Avl.create(root.key, root.left, Avl.remove(root.right, key))
       elif Avl.branchless(root):
         match root.left:
@@ -267,10 +269,10 @@ def Avl.remove(root, key):
           return root
         case Avl/Node:
           balance = Avl.l1ge2(Avl.balance(root))
-          if balance == 0:
-            double = 0
+          if balance == +0:
+            double = +0
           else:
-            if balance == 1:
+            if balance == +1:
               side = Avl.balance(root.left)
             else:
               side = Avl.balance(root.right)
@@ -288,7 +290,7 @@ def main():
   root = Avl.insert(root, Dual(0.0, 30))
   root = Avl.insert(root, Dual(0.0, 40))
   root = Avl.insert(root, Dual(0.0, 50))
-  #root = Avl.insert(root, Dual(0.0, 25))
+  root = Avl.insert(root, Dual(0.0, 25))
   with IO:
     * <- IO/print(Avl.repr(root))
     return *
