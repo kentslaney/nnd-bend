@@ -18,6 +18,12 @@ def max(x, y):
   else:
     return y
 
+def abs(x):
+  if x < +0:
+    return -1 * x
+  else:
+    return x
+
 def Avl.depth(x):
   match x:
     case Avl/Node:
@@ -74,7 +80,7 @@ def Avl.cmp(x, y):
       return Avl.sign(x.key, y)
 
 def Avl.close(approx0, approx1):
-  return approx0 - approx1 < 0.00001
+  return abs(approx0 - approx1) / max(0.00001, abs(approx0 + approx1)) < 0.00001
 
 def Avl.sign(key, y):
   open Dual: key
@@ -116,7 +122,8 @@ def Avl.repr_int(rtl, key):
 
 def Avl.repr_key(rtl, key, height):
   open Dual: key
-  return Avl.repr_int(String/Cons(' ', Avl.repr_int(rtl, height)), key.exact)
+  use eol = String/Cons(' ', Avl.repr_int(rtl, height))
+  return String/Cons(' ', Avl.repr_int(eol, key.exact))
 
 def Avl.empty(x):
   match x:
@@ -285,12 +292,16 @@ def Avl.remove(root, key):
 
 def main():
   root = Avl/Leaf()
-  root = Avl.insert(root, Dual(0.0, 10))
-  root = Avl.insert(root, Dual(0.0, 20))
-  root = Avl.insert(root, Dual(0.0, 30))
-  root = Avl.insert(root, Dual(0.0, 40))
-  root = Avl.insert(root, Dual(0.0, 50))
-  root = Avl.insert(root, Dual(0.0, 25))
+  root = Avl.insert(root, Dual(0.0, +9))
+  root = Avl.insert(root, Dual(0.0, +5))
+  root = Avl.insert(root, Dual(0.0, +10))
+  root = Avl.insert(root, Dual(0.0, +0))
+  root = Avl.insert(root, Dual(0.0, +6))
+  root = Avl.insert(root, Dual(0.0, +11))
+  root = Avl.insert(root, Dual(0.0, -1))
+  root = Avl.insert(root, Dual(0.0, +1))
+  root = Avl.insert(root, Dual(0.0, +2))
+  root = Avl.remove(root, Dual(0.0, +10))
   with IO:
     * <- IO/print(Avl.repr(root))
     return *
