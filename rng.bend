@@ -1,6 +1,6 @@
 # https://github.com/jax-ml/jax/blob/main/jax/_src/prng.py
 
-# low index low order
+# big endian
 nbits = 16
 mask16 = 0x00FFFF
 carry16 = 0x010000
@@ -8,26 +8,29 @@ carry16 = 0x010000
 def add(a, b):
   (a0, a1) = a
   (b0, b1) = b
-  c = a0 + b0
-  return (mask16 & c, mask16 & (((c & carry16) >> nbits) + a1 + b1))
+  c = a1 + b1
+  return (mask16 & (((c & carry16) >> nbits) + a0 + b0), mask16 & c)
 
 def xor(a, b):
   (a0, a1) = a
   (b0, b1) = b
   return (a0 ^ b0, a1 ^ b1)
 
+def rotate_el_left(x0, x1, d):
+  return mask16 & (
+    (x0 << d) | (x0 >> (2 * nbits - d) |
+    (x1 >> (nbits - d)) | (x1 << (d - nbits))))
+
 def rotate_left(x, d):
   (x0, x1) = x
-  return (
-      mask16 & ((x0 << d) | (x1 >> (nbits - d)) | (x0 >> (2 * nbits - d))),
-      mask16 & ((x1 << d) | (x0 >> (nbits - d)) | (x1 >> (2 * nbits - d))))
+  return (rotate_el_left(x0, x1, d), rotate_el_left(x1, x0, d))
 
 def apply_round(v, rot):
   (v0, v1) = v
   v0 = add(v0, v1)
   v1 = rotate_left(v1, rot)
   v1 = xor(v0, v1)
-  return v
+  return (v0, v1)
 
 def apply_rounds(v, r):
   (r0, r1, r2, r3) = r
@@ -38,32 +41,87 @@ def apply_rounds(v, r):
 
 def threefry2x32(k0, k1, x0, x1):
   (r0, r1) = ((13, 15, 26, 6), (17, 29, 16, 24))
-  k2 = xor(xor(k0, k1), (0x1BDA, 0x1BD1))
+  k2 = xor(xor(k0, k1), (0x1BD1, 0x1BDA))
 
   x0 = add(x0, k0)
   x1 = add(x1, k1)
 
   (x0, x1) = apply_rounds((x0, x1), r0)
   x0 = add(x0, k1)
-  x1 = add(add(x1, k2), 1)
+  x1 = add(add(x1, k2), (0, 1))
 
   (x0, x1) = apply_rounds((x0, x1), r1)
   x0 = add(x0, k2)
-  x1 = add(add(x1, k0), 2)
+  x1 = add(add(x1, k0), (0, 2))
 
   (x0, x1) = apply_rounds((x0, x1), r0)
   x0 = add(x0, k0)
-  x1 = add(add(x1, k1), 3)
+  x1 = add(add(x1, k1), (0, 3))
 
   (x0, x1) = apply_rounds((x0, x1), r1)
   x0 = add(x0, k1)
-  x1 = add(add(x1, k2), 4)
+  x1 = add(add(x1, k2), (0, 4))
 
   (x0, x1) = apply_rounds((x0, x1), r0)
   x0 = add(x0, k2)
-  x1 = add(add(x1, k0), 5)
+  x1 = add(add(x1, k0), (0, 5))
 
   return (x0, x1)
 
+def key(seed):
+  return ((0, 0), (0, mask16 & seed))
+
+def random_bits(key, width, iota):
+  (k0, k1) = key
+  (b0, b1) = threefry2x32(k0, k1, (0, 0), (0, iota))
+  if width == 64:
+    (b00, b01) = b0
+    (b10, b11) = b1
+    return (b00, b01, b10, b11)
+  else:
+    bits = b0 # partitionable: xor(b0, b1)
+    if width == 32:
+      return bits
+    else:
+      (hi, lo) = bits
+      bits = (hi << nbits) | lo
+      if width == 24:
+        return bits
+      elif width == 16:
+        return mask16 & bits
+      else: # width == 8
+        return 0xFF & bits
+
+def repr_hex(rtl, key):
+  remainder = key % 16
+  if remainder >= 10:
+    remainder = remainder + 55
+  else:
+    remainder = remainder + 48
+  rtl = String/Cons(remainder, rtl)
+  if key >= 16:
+    return repr_hex(rtl, key / 16)
+  else:
+    return rtl
+
+def pad_word(rtl, size):
+  (length, *) = List/length(rtl)
+  if length < size:
+    return pad_word(String/Cons('0', rtl), size)
+  else:
+    return rtl
+
+def repr_hex_32(rtl, key):
+  (k0, k1) = key
+  (length, *) = List/length(rtl)
+  word = pad_word(repr_hex(rtl, k1), length + 4)
+  return pad_word(repr_hex(word, k0), length + 8)
+
+def repr_hex_64(rtl, key):
+  (k0, k1, k2, k3) = key
+  return repr_hex_32(String/Cons(' ', repr_hex_32(rtl, (k2, k3))), (k0, k1))
+
 def main():
-  return add((0xDEAD, 0xBEEF), (0x8BAD, 0xF00D))
+  # return repr_hex_32(String/Nil, rotate_left((0xDEAD, 0xBEEF), 24))
+  # python -c "import jax; print(hex(int(jax.random.bits(jax.random.key(42), dtype=jax.numpy.uint32))).upper())"
+  return repr_hex_32(String/Nil, random_bits(key(42), 32, 0))
