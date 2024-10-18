@@ -73,7 +73,8 @@ def key(seed):
 
 def random_bits(key, width, iota):
   (k0, k1) = key
-  (b0, b1) = threefry2x32(k0, k1, (0, 0), (0, iota))
+  (i0, i1) = iota
+  (b0, b1) = threefry2x32(k0, k1, (0, i0), (0, i1))
   if width == 64:
     (b00, b01) = b0
     (b10, b11) = b1
@@ -121,7 +122,56 @@ def repr_hex_64(rtl, key):
   (k0, k1, k2, k3) = key
   return repr_hex_32(String/Cons(' ', repr_hex_32(rtl, (k2, k3))), (k0, k1))
 
-def main():
-  # return repr_hex_32(String/Nil, rotate_left((0xDEAD, 0xBEEF), 24))
-  # python -c "import jax; print(hex(int(jax.random.bits(jax.random.key(42), dtype=jax.numpy.uint32))).upper())"
-  return repr_hex_32(String/Nil, random_bits(key(42), 32, 0))
+def pairs(keys):
+  match keys:
+    case List/Cons:
+      pair = keys.tail
+      match pair:
+        case List/Cons:
+          return List/Cons((keys.head, pair.head), pairs(pair.tail))
+        case _:
+          return keys
+    case _:
+      return keys
+
+def split(key, num):
+  bend val = num, offset = 0:
+    when val > 1:
+      floordiv = val / 2
+      (a0, a1) = fork(floordiv, offset)
+      (b0, b1) = fork(val - floordiv, offset + floordiv)
+      x = (List/concat(a0, b0), List/concat(a1, b1))
+    else:
+      (x0, x1, x2, x3) = random_bits(key, 64, (offset, num + offset))
+      x = ([(x0, x1)], [(x2, x3)])
+  (x0, x1) = x
+  return pairs(List/concat(x0, x1))
+
+def test_shift():
+  (a0, a1) = rotate_left((0xDEAD, 0xBEEF), 4)
+  (b0, b1) = rotate_left((0xDEAD, 0xBEEF), 24)
+  return repr_hex_64("\n", (a0, a1, b0, b1))
+
+# python -c "import jax; print('{:08X}'.format(int("\
+#   "jax.random.bits(jax.random.key(42), dtype=jax.numpy.uint32))))"
+def test_hash():
+  return repr_hex_32("\n", random_bits(key(42), 32, (0, 0)))
+
+# python -c "import jax; print(jax.random.split(jax.random.key(42), 4))" |
+#   sed 's/.*:\|\[\|\]//g' | tr -s ' ' |
+#   xargs -I % python -c "print(' '.join('{:08X}'.format(int(i)) for i in '''%'''.strip().split()))"
+def test_split():
+  return repr_split(split(key(42), 4))
+
+def repr_split(res):
+  fold res:
+    case List/Cons:
+      ((x0, x1), (x2, x3)) = res.head
+      return repr_hex_64(String/Cons('\n', res.tail), (x0, x1, x2, x3))
+    case List/Nil:
+      return String/Nil
+
+def main:
+  with IO:
+    * <- IO/print(test_split())
+    return 0
