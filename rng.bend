@@ -17,9 +17,9 @@ def xor(a, b):
   return (a0 ^ b0, a1 ^ b1)
 
 def rotate_el_left(x0, x1, d):
-  return mask16 & (
-    (x0 << d) | (x0 >> (2 * nbits - d) |
-    (x1 >> (nbits - d)) | (x1 << (d - nbits))))
+  first = (x0 << d) | (x0 >> (2 * nbits - d))
+  second = (x1 >> (nbits - d)) | (x1 << (d - nbits))
+  return mask16 & (first | second)
 
 def rotate_left(x, d):
   (x0, x1) = x
