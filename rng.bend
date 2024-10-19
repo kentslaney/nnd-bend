@@ -5,6 +5,9 @@ nbits = 16
 mask16 = 0x00FFFF
 carry16 = 0x010000
 
+nmant = 15
+significand_prefix = 0x8000
+
 def add(a, b):
   (a0, a1) = a
   (b0, b1) = b
@@ -71,28 +74,6 @@ def threefry2x32(k0, k1, x0, x1):
 def key(seed):
   return ((0, 0), (0, mask16 & seed))
 
-def random_bits_dtyped(key, width, iota):
-  (k0, k1) = key
-  (i0, i1) = iota
-  (b0, b1) = threefry2x32(k0, k1, (0, i0), (0, i1))
-  if width == 64:
-    (b00, b01) = b0
-    (b10, b11) = b1
-    return (b00, b01, b10, b11)
-  else:
-    bits = b0 # partitionable: xor(b0, b1)
-    if width == 32:
-      return bits
-    else:
-      (hi, lo) = bits
-      bits = (hi << nbits) | lo
-      if width == 24:
-        return bits
-      elif width == 16:
-        return mask16 & bits
-      else: # width == 8
-        return 0xFF & bits
-
 def repr_hex(rtl, key):
   remainder = key % 16
   if remainder >= 10:
@@ -150,9 +131,8 @@ def size(shape):
     case List/Nil:
       return 1
 
-def random_bits(key, shape):
+def random_bits_(key, num):
   (k0, k1) = key
-  num = size(shape)
   is_odd = num % 2
   split = num / 2 + is_odd
   bend val = split, offset = 0:
@@ -173,15 +153,17 @@ def random_bits(key, shape):
       else:
         x = ([x0], [x1])
   (x0, x1) = x
-  return reshape(List/concat(x0, x1), shape)
+  return List/concat(x0, x1)
+
+def random_bits(key, shape):
+  return reshape(random_bits_(key, size(shape)), shape)
 
 def split(key, num):
   fold out = random_bits(key, [num, 2]):
     case List/Cons:
       match row = out.head:
         case List/Cons:
-          end = row.tail
-          match end:
+          match end = row.tail:
             case List/Cons:
               row = (row.head, end.head)
             case _:
@@ -192,27 +174,92 @@ def split(key, num):
     case List/Nil:
       return List/Nil
 
+def split_2(key):
+  match out = split(key, 2):
+    case List/Cons:
+      match end = out.tail:
+        case List/Cons:
+          return (out.head, end.head)
+        case _:
+          return List/Nil
+    case _:
+      return List/Nil
+
+def bitcast_mantissa(x: u24) -> f24:
+  cast = u24/to_f24(x | significand_prefix) / u24/to_f24(significand_prefix)
+  return cast - 1.0
+
+def bitcast_32(x):
+  (hi, *) = x
+  return bitcast_mantissa(hi >> (nbits - nmant))
+
+def uniform_(key, num):
+  return [bitcast_32(i) for i in random_bits_(key, num)]
+
+def uniform(key, shape, lo: f24, hi: f24):
+  scaled = [(i + lo) * (hi - lo) for i in uniform_(key, size(shape))]
+  return reshape(scaled, shape)
+
+def zip(i0, i1):
+  match i0:
+    case List/Cons:
+      match i1:
+        case List/Cons:
+          return List/Cons((i0.head, i1.head), zip(i0.tail, i1.tail))
+        case _:
+          return List/Nil
+    case _:
+      return List/Nil
+
+def flatten_64(it):
+  fold it:
+    case List/Cons:
+      ((x0, x1), (x2, x3)) = it.head
+      return List/Cons((x0, x1, x2, x3), it.tail)
+    case _:
+      return List/Nil
+
+def mod_(carry, dividend, divisor, size, mul):
+  (x, y) = dividend
+  carry = ((carry * mul) % divisor + ((x * mul) % divisor)) % divisor
+  if size == 2:
+    return (carry + y) % divisor
+  else:
+    return mod_(carry, y, divisor, size - 1, mul)
+
+def mod_64(it, span):
+  return [mod_(0, i, span, 4, carry16 % span) for i in it]
+
+def randint_(key, num, lo, hi):
+  k1, k2 = split_2(key)
+  hi_bits = random_bits_(k1, num)
+  lo_bits = random_bits_(k2, num)
+  return [lo + i for i in mod_64(flatten_64(zip(hi_bits, lo_bits)), hi - lo)]
+
+def randint(key, shape, lo, hi):
+  return reshape(randint_(key, size(shape), lo, hi), shape)
+
 def test_shift():
   (a0, a1) = rotate_left((0xDEAD, 0xBEEF), 4)
   (b0, b1) = rotate_left((0xDEAD, 0xBEEF), 24)
   return repr_hex_64("\n", (a0, a1, b0, b1))
 
-# python -c "import jax; print('{:08X}'.format(int("\
-#   "jax.random.bits(jax.random.key(42), dtype=jax.numpy.uint32))))"
+# import jax; print(hex(int(jax.random.bits(jax.random.key(42)))))
 def test_hash():
-  return repr_hex_32("\n", random_bits_dtyped(key(42), 32, (0, 0)))
+  (hi, lo) = threefry2x32((0, 0), (0, 42), (0, 0), (0, 0))
+  return repr_hex_32("\n", hi)
 
-# python -c "import jax; print(jax.random.split(jax.random.key(42), 4))" |
-#   sed 's/.*:\|\[\|\]//g' | tr -s ' ' |
-#   xargs -I % python -c "print(' '.join('{:08X}'.format(int(i)) for i in '''%'''.strip().split()))"
-def test_split():
-  return repr_split(split(key(42), 4))
+# import jax; print('\n'.join(map(hex, jax.random.bits(jax.random.key(42), 5))))
+def test_bits():
+  return repr_hex_32_seq(random_bits(key(42), [5]))
 
-# python -c "import jax; print(jax.random.bits(jax.random.key(42), (3, 1)))" |
-#   sed 's/.*:\|\[\|\]//g' | tr -s ' ' |
-#   xargs -I % python -c "print(' '.join('{:08X}'.format(int(i)) for i in '''%'''.strip().split()))"
-def test_odd_shape():
-  return repr_hex_32_seq(random_bits(key(42), [3]))
+# import jax; print(jax.random.uniform(jax.random.key(42), (3,)))
+def test_uniform():
+  return uniform(key(42), [3], 0.0, 1.0)
+
+# import jax; print(jax.random.randint(jax.random.key(42), (3, 2), 0, 100))
+def test_randint():
+  return randint(key(42), [3, 2], 0, 100)
 
 def repr_hex_32_seq(res):
   fold res:
@@ -230,6 +277,4 @@ def repr_split(res):
       return String/Nil
 
 def main:
-  with IO:
-    * <- IO/print(test_odd_shape())
-    return 0
+  return test_uniform()
