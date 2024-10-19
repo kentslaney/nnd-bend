@@ -74,15 +74,15 @@ def threefry2x32(k0, k1, x0, x1):
 def key(seed):
   return ((0, 0), (0, mask16 & seed))
 
-def repr_hex(rtl, key):
-  remainder = key % 16
+def repr_hex(rtl, keys):
+  remainder = keys % 16
   if remainder >= 10:
     remainder = remainder + 55
   else:
     remainder = remainder + 48
   rtl = String/Cons(remainder, rtl)
-  if key >= 16:
-    return repr_hex(rtl, key / 16)
+  if keys >= 16:
+    return repr_hex(rtl, keys / 16)
   else:
     return rtl
 
@@ -93,14 +93,14 @@ def pad_word(rtl, size):
   else:
     return rtl
 
-def repr_hex_32(rtl, key):
-  (k0, k1) = key
+def repr_hex_32(rtl, keys):
+  (k0, k1) = keys
   (length, *) = List/length(rtl)
   word = pad_word(repr_hex(rtl, k1), length + 4)
   return pad_word(repr_hex(word, k0), length + 8)
 
-def repr_hex_64(rtl, key):
-  (k0, k1, k2, k3) = key
+def repr_hex_64(rtl, keys):
+  (k0, k1, k2, k3) = keys
   return repr_hex_32(String/Cons(' ', repr_hex_32(rtl, (k2, k3))), (k0, k1))
 
 def reshape_(flat, shape):
@@ -124,29 +124,29 @@ def reshape(flat, shape):
   (out, *) = reshape_(flat, shape)
   return out
 
-def size(shape):
+def shape_size(shape):
   fold shape:
     case List/Cons:
       return shape.head * shape.tail
     case List/Nil:
       return 1
 
-def random_bits_(key, num):
-  (k0, k1) = key
+def random_bits_(keys, num):
+  (k0, k1) = keys
   is_odd = num % 2
-  split = num / 2 + is_odd
-  bend val = split, offset = 0:
+  total = num / 2 + is_odd
+  bend val = total, offset = 0:
     when val > 1:
       floordiv = val / 2
       (a0, a1) = fork(floordiv, offset)
       (b0, b1) = fork(val - floordiv, offset + floordiv)
       x = (List/concat(a0, b0), List/concat(a1, b1))
     else:
-      odd_pad = is_odd & (offset == split - 1)
+      odd_pad = is_odd & (offset == total - 1)
       if odd_pad:
         lo = 0
       else:
-        lo = split + offset
+        lo = total + offset
       (x0, x1) = threefry2x32(k0, k1, (0, offset), (0, lo))
       if odd_pad:
         x = ([x0], [])
@@ -155,11 +155,11 @@ def random_bits_(key, num):
   (x0, x1) = x
   return List/concat(x0, x1)
 
-def random_bits(key, shape):
-  return reshape(random_bits_(key, size(shape)), shape)
+def random_bits(keys, shape):
+  return reshape(random_bits_(keys, shape_size(shape)), shape)
 
-def split(key, num):
-  fold out = random_bits(key, [num, 2]):
+def split(keys, num):
+  fold out = random_bits(keys, [num, 2]):
     case List/Cons:
       match row = out.head:
         case List/Cons:
@@ -174,8 +174,8 @@ def split(key, num):
     case List/Nil:
       return List/Nil
 
-def split_2(key):
-  match out = split(key, 2):
+def split_2(keys):
+  match out = split(keys, 2):
     case List/Cons:
       match end = out.tail:
         case List/Cons:
@@ -193,11 +193,11 @@ def bitcast_32(x):
   (hi, *) = x
   return bitcast_mantissa(hi >> (nbits - nmant))
 
-def uniform_(key, num):
-  return [bitcast_32(i) for i in random_bits_(key, num)]
+def uniform_(keys, num):
+  return [bitcast_32(i) for i in random_bits_(keys, num)]
 
-def uniform(key, shape, lo: f24, hi: f24):
-  scaled = [(i + lo) * (hi - lo) for i in uniform_(key, size(shape))]
+def uniform(keys, shape, lo: f24, hi: f24):
+  scaled = [(i + lo) * (hi - lo) for i in uniform_(keys, shape_size(shape))]
   return reshape(scaled, shape)
 
 def zip(i0, i1):
@@ -230,14 +230,14 @@ def mod_(carry, dividend, divisor, size, mul):
 def mod_64(it, span):
   return [mod_(0, i, span, 4, carry16 % span) for i in it]
 
-def randint_(key, num, lo, hi):
-  k1, k2 = split_2(key)
+def randint_(keys, num, lo, hi):
+  k1, k2 = split_2(keys)
   hi_bits = random_bits_(k1, num)
   lo_bits = random_bits_(k2, num)
   return [lo + i for i in mod_64(flatten_64(zip(hi_bits, lo_bits)), hi - lo)]
 
-def randint(key, shape, lo, hi):
-  return reshape(randint_(key, size(shape), lo, hi), shape)
+def randint(keys, shape, lo, hi):
+  return reshape(randint_(keys, shape_size(shape), lo, hi), shape)
 
 def test_shift():
   (a0, a1) = rotate_left((0xDEAD, 0xBEEF), 4)
@@ -246,7 +246,7 @@ def test_shift():
 
 # import jax; print(hex(int(jax.random.bits(jax.random.key(42)))))
 def test_hash():
-  (hi, lo) = threefry2x32((0, 0), (0, 42), (0, 0), (0, 0))
+  (hi, *) = threefry2x32((0, 0), (0, 42), (0, 0), (0, 0))
   return repr_hex_32("\n", hi)
 
 # import jax; print('\n'.join(map(hex, jax.random.bits(jax.random.key(42), 5))))
