@@ -125,41 +125,40 @@ def reshape(flat, shape):
   return out
 
 def shape_size(shape):
-  fold shape:
+  match shape:
     case List/Cons:
-      return shape.head * shape.tail
+      return shape.head * shape_size(shape.tail)
     case List/Nil:
       return 1
 
-def random_bits_(keys, num):
-  (k0, k1) = keys
-  is_odd = num % 2
-  total = num / 2 + is_odd
-  bend val = total, offset = 0:
-    when val > 1:
-      floordiv = val / 2
-      (a0, a1) = fork(floordiv, offset)
-      (b0, b1) = fork(val - floordiv, offset + floordiv)
-      x = (List/concat(a0, b0), List/concat(a1, b1))
+def random_bits_(k0, k1, total, aliased, val, offset):
+  if val > 1:
+    pivot = val / 2
+    (a0, a1) = random_bits_(k0, k1, total, aliased, pivot, offset)
+    (b0, b1) = random_bits_(k0, k1, total, aliased, val - pivot, offset + pivot)
+    return (List/concat(a0, b0), List/concat(a1, b1))
+  else:
+    odd_pad = aliased & (offset == total - 1)
+    if odd_pad:
+      lo = 0
     else:
-      odd_pad = is_odd & (offset == total - 1)
-      if odd_pad:
-        lo = 0
-      else:
-        lo = total + offset
-      (x0, x1) = threefry2x32(k0, k1, (0, offset), (0, lo))
-      if odd_pad:
-        x = ([x0], [])
-      else:
-        x = ([x0], [x1])
-  (x0, x1) = x
-  return List/concat(x0, x1)
+      lo = total + offset
+    (x0, x1) = threefry2x32(k0, k1, (0, offset), (0, lo))
+    if odd_pad:
+      return ([x0], [])
+    else:
+      return ([x0], [x1])
 
 def random_bits(keys, shape):
-  return reshape(random_bits_(keys, shape_size(shape)), shape)
+  (k0, k1) = keys
+  num = shape_size(shape)
+  is_odd = num % 2
+  total = num / 2 + is_odd
+  (x0, x1) = random_bits_(k0, k1, total, is_odd, total, 0)
+  return reshape(List/concat(x0, x1), shape)
 
-def split(keys, num):
-  fold out = random_bits(keys, [num, 2]):
+def split_(out):
+  match out:
     case List/Cons:
       match row = out.head:
         case List/Cons:
@@ -170,9 +169,12 @@ def split(keys, num):
               row = List/Nil
         case _:
           row = List/Nil
-      return List/Cons(row, out.tail)
+      return List/Cons(row, split_(out.tail))
     case List/Nil:
       return List/Nil
+
+def split(keys, num):
+  return split_(random_bits(keys, [num, 2]))
 
 def split_2(keys):
   match out = split(keys, 2):
@@ -194,7 +196,7 @@ def bitcast_32(x):
   return bitcast_mantissa(hi >> (nbits - nmant))
 
 def uniform_(keys, num):
-  return [bitcast_32(i) for i in random_bits_(keys, num)]
+  return [bitcast_32(i) for i in random_bits(keys, [num])]
 
 def uniform(keys, shape, lo: f24, hi: f24):
   scaled = [(i + lo) * (hi - lo) for i in uniform_(keys, shape_size(shape))]
@@ -212,29 +214,29 @@ def zip(i0, i1):
       return List/Nil
 
 def flatten_64(it):
-  fold it:
+  match it:
     case List/Cons:
       ((x0, x1), (x2, x3)) = it.head
-      return List/Cons((x0, x1, x2, x3), it.tail)
+      return List/Cons([x0, x1, x2, x3], flatten_64(it.tail))
     case _:
       return List/Nil
 
-def mod_(carry, dividend, divisor, size, mul):
-  (x, y) = dividend
-  carry = ((carry * mul) % divisor + ((x * mul) % divisor)) % divisor
-  if size == 2:
-    return (carry + y) % divisor
-  else:
-    return mod_(carry, y, divisor, size - 1, mul)
+def mod_(carry, dividend, divisor, mul):
+  match dividend:
+    case List/Cons:
+      x = ((carry * mul) % divisor + dividend.head) % divisor
+      return mod_(x, dividend.tail, divisor, mul)
+    case List/Nil:
+      return carry
 
-def mod_64(it, span):
-  return [mod_(0, i, span, 4, carry16 % span) for i in it]
+def big_mod(it, span):
+  return [mod_(0, i, span, carry16 % span) for i in it]
 
 def randint_(keys, num, lo, hi):
   k1, k2 = split_2(keys)
-  hi_bits = random_bits_(k1, num)
-  lo_bits = random_bits_(k2, num)
-  return [lo + i for i in mod_64(flatten_64(zip(hi_bits, lo_bits)), hi - lo)]
+  hi_bits = random_bits(k1, [num])
+  lo_bits = random_bits(k2, [num])
+  return [lo + i for i in big_mod(flatten_64(zip(hi_bits, lo_bits)), hi - lo)]
 
 def randint(keys, shape, lo, hi):
   return reshape(randint_(keys, shape_size(shape), lo, hi), shape)
@@ -277,4 +279,8 @@ def repr_split(res):
       return String/Nil
 
 def main:
-  return test_uniform()
+  with IO:
+    #* <- IO/print(test_hash())
+    #* <- IO/print(test_bits())
+    #return test_uniform()
+    return test_randint()
