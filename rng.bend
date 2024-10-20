@@ -230,7 +230,12 @@ def mod_(carry, dividend, divisor, mul):
       return carry
 
 def big_mod(it, span):
-  return [mod_(0, i, span, carry16 % span) for i in it]
+  match it:
+    case List/Cons:
+      el = mod_(0, it.head, span, carry16 % span)
+      return List/Cons(el, big_mod(it.tail, span))
+    case _:
+      return List/Nil
 
 def randint_(keys, num, lo, hi):
   k1, k2 = split_2(keys)
