@@ -246,6 +246,10 @@ def randint_(keys, num, lo, hi):
 def randint(keys, shape, lo, hi):
   return reshape(randint_(keys, shape_size(shape), lo, hi), shape)
 
+def bernoulli(keys, shape, p):
+  flat = [i < p for i in uniform(keys, [shape_size(shape)], 0.0, 1.0)]
+  return reshape(flat, shape)
+
 def test_shift():
   (a0, a1) = rotate_left((0xDEAD, 0xBEEF), 4)
   (b0, b1) = rotate_left((0xDEAD, 0xBEEF), 24)
