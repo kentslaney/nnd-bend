@@ -1,5 +1,27 @@
 from ./rng import (key, split, split_2, randint, bernoulli, zip)
 
+def max_order_(bin, pos):
+  if (bin >> pos) | (pos == 0):
+    return pos
+  else:
+    return max_order_(bin, pos - 1)
+
+def max_order(bin):
+  return max_order_(bin, 23)
+
+def flip_(bin, pad, res, pos):
+  res = res << 1 | ((bin >> pos) & 1)
+  if pos < pad:
+    return flip_(bin, pad, res, pos + 1)
+  else:
+    return res
+
+def flip(bin: u24):
+  return flip_(bin, max_order(bin), 0, 0)
+
+def test_flip():
+  return flip(0b11001) == 0b10011
+
 type DirectAccess: # < index goes left
   Node { index, ~left, ~right }
   Leaf { value }
@@ -31,36 +53,30 @@ def DirectAccess.get(self, el):
     case DirectAccess/Leaf:
       return self.value
 
+def split_out(subkeys):
+  match subkeys:
+    case List/Nil:
+      return (*, List/Nil)
+    case List/Cons:
+      return (subkeys.head, subkeys.tail)
+
+def unwrap_singleton(arr):
+  match arr:
+    case List/Nil:
+      return *
+    case List/Cons:
+      return arr.head
+
 def sample(rng, start, end):
   rng = split(rng, 3)
-  match rng:
-    case List/Cons:
-      (rng, nxt) = (rng.head, rng.tail)
-      match nxt:
-        case List/Cons:
-          first = randint(nxt.head, [1], start, end)
-          match first:
-            case List/Cons:
-              first = first.head
-            case _:
-              first = *
-          nxt = nxt.tail
-          match nxt:
-            case List/Cons:
-              second = randint(nxt.head, [1], start, end - 1)
-              match second:
-                case List/Cons:
-                  second = second.head
-                case _:
-                  second = *
-              second += second >= first
-              return (rng, first, second)
-            case _:
-              return *
-        case _:
-          return *
-    case _:
-      return *
+  rng, nxt = split_out(rng)
+  first, nxt = split_out(rng)
+  second, * = split_out(rng)
+
+  first = unwrap_singleton(randint(first, [1], start, end))
+  second = unwrap_singleton(randint(second, [1], start, end - 1))
+  second += second >= first
+  return (rng, first, second)
 
 def list_index(arr, index):
   match arr:
@@ -107,25 +123,101 @@ def lr_split(delta, boundary, data):
       else:
         return (List/Cons(data.head, l), r)
 
-def degenerate(rng, data, index, largest):
+def postfix(arr, size):
+  if size == 0:
+    return arr
+  else:
+    match arr:
+      case List/Cons:
+        return postfix(arr.tail, size - 1)
+      case _:
+        return List/Nil
+
+def sided(it):
+  match it:
+    case List/Nil:
+      return (List/Nil, List/Nil)
+    case List/Cons:
+      l, r = sided(it.tail)
+      mask, data = it.head
+      if mask:
+        return (l, List/Cons(data, r))
+      else:
+        return (List/Cons(data, l), r)
+
+def max(x, y):
+  if x > y:
+    return x
+  else:
+    return y
+
+def degenerate(rng, data, size, args, j):
+  (largest, total, *, bound) = args
   rng, subkey = split_2(rng)
   mask = bernoulli(subkey, [largest], 0.5)
-  return *
-
-def rp_split(rng, data, bound, index, largest, prev):
-  total = List/length(data)
-  (rng, first, second) = sample(rng, 0, total)
-  first = list_index(data, first)
-  second = list_index(data, second)
-  (delta, boundary) = hyperplane(first, second)
-  (l, r) = lr_split(delta, boundary, data)
+  mask = postfix(mask, max(j + largest - total, 0))
+  (l, r) = sided(zip(mask, data))
   side = List/length(l)
-  if (side == 0) | (side == total) | (side == prev) | (side == total - prev):
-    return degenerate(rng, data, index, largest)
-  elif (side < (1 - bound) * total) | (side > bound * total):
-    return rp_split(rng, data, bound, index, largest, prev)
+  if (side < (1 - bound) * size) | (side > bound * size):
+    return degenerate(rng, data, bound, j)
   else:
-    return (rng, l, r)
+    (l, r) = (DirectAccess/Leaf(l), DirectAccess/Leaf(r))
+    return (rng, DirectAccess/Node(j + side, l, r))
+
+def rp_split(rng, data, args, j, prev):
+  (*, *, goal_leaf_size, bound) = args
+  size = List/length(data)
+  if size <= goal_leaf_size:
+    return !data
+  else:
+    (rng, first, second) = sample(rng, 0, size)
+    first = list_index(data, first)
+    second = list_index(data, second)
+    (delta, boundary) = hyperplane(first, second)
+    (l, r) = lr_split(delta, boundary, data)
+    side = List/length(l)
+    if (side == 0) | (side == size) | (side == prev) | (side == size - prev):
+      return degenerate(rng, data, size, args, j)
+    elif (side < (1 - bound) * size) | (side > bound * size):
+      return rp_split(rng, data, args, j, side)
+    else:
+      (l, r) = (DirectAccess/Leaf(l), DirectAccess/Leaf(r))
+      return (rng, DirectAccess/Node(j + side, l, r))
+
+def rp_tree_inner(rng, data, args, j):
+  match data:
+    case DirectAccess/Node:
+      match rng:
+        case DirectAccess/Node:
+          (l, r) = (rng.left, rng.right)
+        case _:
+          (l, r) = (*, *)
+      first = rp_tree_inner(l, data.left, args, j)
+      second = rp_tree_inner(r, data.right, args, data.index)
+      return DirectAccess/Node(data.index, first, second)
+    case DirectAccess/Leaf:
+      data = data.value
+      return rp_split(rng, data, args, j, 0)
+
+def rp_tree_outer(rng, data, args, loops, i):
+  if i >= loops:
+    return (rng, data)
+  else:
+    (total, *, bound) = args
+    largest = Math/ceil(total * bound ** i)
+    layer_size = 2 ** i
+    args = (largest, args)
+    subkeys = split(rng, layer_size + 1)
+    (rng, subkeys) = split_out(rng)
+    subkeys = DirectAccess.create(subkeys)
+    (rng, data) = rp_tree_inner(subkeys, data, args, total, 0)
+    return rp_tree_outer(rng, data, args, loops, i + 1)
+
+def rp_tree(rng, data, goal_leaf_size: u24, bound: f24):
+  (total, data) = List/length(data)
+  min = max_order(total / goal_leaf_size + ((total % goal_leaf_size) != 0) - 1)
+  args = (total, goal_leaf_size, bound)
+  return rp_tree_outer(rng, DirectAccess/Leaf(data), args, min, 0)
 
 def main:
   return sample(key(42), 0, 3)
