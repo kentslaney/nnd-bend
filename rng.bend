@@ -240,11 +240,17 @@ def bernoulli(keys, shape, p):
   flat = [i < p for i in uniform_(keys, shape_size(shape))]
   return reshape(flat, shape)
 
+sqrt2 = 1.4142135623
+
+def normal_(flat):
+  match flat:
+    case List/Cons:
+      return List/Cons(sqrt2 * erf_inv(flat.head), normal_(flat.tail))
+    case _:
+      return List/Nil
+
 def normal(keys, shape):
-  sqrt2 = 1.4142135623
-  flat = uniform(keys, [shape_size(shape)], -1.0, 1.0)
-  flat = [sqrt2 * erf_inv(i) for i in flat]
-  return reshape(flat, shape)
+  return reshape(normal_(uniform(keys, [shape_size(shape)], -1.0, 1.0)), shape)
 
 def test_shift():
   (a0, a1) = rotate_left((0xDEAD, 0xBEEF), 4)
