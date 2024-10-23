@@ -1,4 +1,4 @@
-from ./rng import (key, split, split_2, randint, bernoulli)
+from ./rng import (split, split_2, randint, bernoulli)
 from ./util import zip
 
 def max_order_(bin, pos):
@@ -90,8 +90,12 @@ def list_index(arr, index):
       return *
 
 def diff_tuple(it):
-  (l, r) = it
-  return l - r
+  match it:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      (l, r) = it.head
+      return List/Cons(l - r, diff_tuple(it.tail))
 
 def sum_list(it):
   match it:
@@ -100,18 +104,26 @@ def sum_list(it):
     case List/Nil:
       return 0
 
-def mean_dot(args):
-  (delta, (left, right)) = args
-  return delta * (left + right) / 2
+def mean_dot(it):
+  match it:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      (delta, (left, right)) = it.head
+      return List/Cons(delta * (left + right) / 2, mean_dot(it.tail))
 
 def hyperplane(left, right):
-  delta = [diff_tuple(i) for i in zip(left, right)]
-  boundary = sum_list([mean_dot(i) for i in zip(delta, zip(left, right))])
+  delta = diff_tuple(zip(left, right))
+  boundary = sum_list(mean_dot(zip(delta, zip(left, right))))
   return (delta, boundary)
 
-def dot(args):
-  (l, r) = args
-  return l * r
+def dot(it):
+  match it:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      (l, r) = it.head
+      return List/Cons(l * r, dot(it.tail))
 
 def lr_split(delta, boundary, data):
   match data:
@@ -119,7 +131,7 @@ def lr_split(delta, boundary, data):
       return (List/Nil, List/Nil)
     case List/Cons:
       (l, r) = lr_split(delta, boundary, data.tail)
-      if sum_list([dot(i) for i in zip(delta, data.head)]) > boundary:
+      if sum_list(dot(zip(delta, data.head))) > boundary:
         return (l, List/Cons(data.head, r))
       else:
         return (List/Cons(data.head, l), r)
@@ -221,4 +233,4 @@ def rp_tree(rng, data, goal_leaf_size: u24, bound: f24):
   return rp_tree_outer(rng, DirectAccess/Leaf(data), args, min, 0)
 
 def main:
-  return sample(key(42), 0, 3)
+  return *
