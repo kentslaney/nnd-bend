@@ -85,7 +85,7 @@ def list_index(arr, index):
       if index == 0:
         return arr.head
       else:
-        return list_index(arr, index - 1)
+        return list_index(arr.tail, index - 1)
     case List/Nil:
       return *
 
@@ -102,7 +102,7 @@ def sum_list(it):
     case List/Cons:
       return it.head + sum_list(it.tail)
     case List/Nil:
-      return 0
+      return 0.0
 
 def mean_dot(it):
   match it:
@@ -110,7 +110,7 @@ def mean_dot(it):
       return List/Nil
     case List/Cons:
       (delta, (left, right)) = it.head
-      return List/Cons(delta * (left + right) / 2, mean_dot(it.tail))
+      return List/Cons(delta * (left + right) / 2.0, mean_dot(it.tail))
 
 def hyperplane(left, right):
   delta = diff_tuple(zip(left, right))
@@ -170,8 +170,8 @@ def degenerate(rng, data, size, args, j):
   mask = bernoulli(subkey, [largest], 0.5)
   mask = postfix(mask, max(j + largest - total, 0))
   (l, r) = sided(zip(mask, data))
-  side = List/length(l)
-  if (side < (1 - bound) * size) | (side > bound * size):
+  (side, l) = List/length(l)
+  if (side < (1.0 - bound) * size) | (side > bound * size):
     return degenerate(rng, data, bound, j)
   else:
     (l, r) = (DirectAccess/Leaf(l), DirectAccess/Leaf(r))
@@ -179,19 +179,20 @@ def degenerate(rng, data, size, args, j):
 
 def rp_split(rng, data, args, j, prev):
   (*, *, goal_leaf_size, bound) = args
-  size = List/length(data)
+  (size, data) = List/length(data)
   if size <= goal_leaf_size:
-    return !data
+    return DirectAccess/Leaf(data)
   else:
     (rng, first, second) = sample(rng, 0, size)
     first = list_index(data, first)
     second = list_index(data, second)
     (delta, boundary) = hyperplane(first, second)
     (l, r) = lr_split(delta, boundary, data)
-    side = List/length(l)
+    (side, l) = List/length(l)
+    (fp_side, fp_size) = (u24/to_f24(side), u24/to_f24(size))
     if (side == 0) | (side == size) | (side == prev) | (side == size - prev):
       return degenerate(rng, data, size, args, j)
-    elif (side < (1 - bound) * size) | (side > bound * size):
+    elif (fp_side < (1.0 - bound) * fp_size) | (fp_side > bound * fp_size):
       return rp_split(rng, data, args, j, side)
     else:
       (l, r) = (DirectAccess/Leaf(l), DirectAccess/Leaf(r))
@@ -210,6 +211,11 @@ def rp_tree_inner(rng, data, args, j):
       return DirectAccess/Node(data.index, first, second)
     case DirectAccess/Leaf:
       data = data.value
+      match rng:
+        case DirectAccess/Node:
+          rng = *
+        case _:
+          rng = rng.value
       return rp_split(rng, data, args, j, 0)
 
 def rp_tree_outer(rng, data, args, loops, i):
@@ -217,18 +223,19 @@ def rp_tree_outer(rng, data, args, loops, i):
     return (rng, data)
   else:
     (total, *, bound) = args
-    largest = Math/ceil(total * bound ** i)
-    layer_size = 2 ** i
-    args = (largest, args)
+    largest = f24/to_u24(Math/ceil(u24/to_f24(total) * bound ** u24/to_f24(i)))
+    layer_size = 1 << i
+    inner_args = (largest, args)
     subkeys = split(rng, layer_size + 1)
-    (rng, subkeys) = split_out(rng)
+    (rng, subkeys) = split_out(subkeys)
     subkeys = DirectAccess.create(subkeys)
-    (rng, data) = rp_tree_inner(subkeys, data, args, total, 0)
+    (rng, data) = rp_tree_inner(subkeys, data, inner_args, 0)
     return rp_tree_outer(rng, data, args, loops, i + 1)
 
 def rp_tree(rng, data, goal_leaf_size: u24, bound: f24):
   (total, data) = List/length(data)
-  min = max_order(total / goal_leaf_size + ((total % goal_leaf_size) != 0) - 1)
+  rem = (total % goal_leaf_size) != 0
+  min = max_order(total / goal_leaf_size + rem - 1) + 1
   args = (total, goal_leaf_size, bound)
   return rp_tree_outer(rng, DirectAccess/Leaf(data), args, min, 0)
 
