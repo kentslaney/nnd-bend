@@ -1,4 +1,5 @@
 # https://github.com/jax-ml/jax/blob/main/jax/_src/prng.py
+from ./util import (erf_inv, zip)
 
 # big endian
 nbits = 16
@@ -199,19 +200,8 @@ def uniform_(keys, num):
   return [bitcast_32(i) for i in random_bits(keys, [num])]
 
 def uniform(keys, shape, lo: f24, hi: f24):
-  scaled = [(i + lo) * (hi - lo) for i in uniform_(keys, shape_size(shape))]
+  scaled = [i * (hi - lo) + lo for i in uniform_(keys, shape_size(shape))]
   return reshape(scaled, shape)
-
-def zip(i0, i1):
-  match i0:
-    case List/Cons:
-      match i1:
-        case List/Cons:
-          return List/Cons((i0.head, i1.head), zip(i0.tail, i1.tail))
-        case _:
-          return List/Nil
-    case _:
-      return List/Nil
 
 def flatten_64(it):
   match it:
@@ -247,7 +237,13 @@ def randint(keys, shape, lo, hi):
   return reshape(randint_(keys, shape_size(shape), lo, hi), shape)
 
 def bernoulli(keys, shape, p):
-  flat = [i < p for i in uniform(keys, [shape_size(shape)], 0.0, 1.0)]
+  flat = [i < p for i in uniform_(keys, shape_size(shape))]
+  return reshape(flat, shape)
+
+def normal(keys, shape):
+  sqrt2 = 1.4142135623
+  flat = uniform(keys, [shape_size(shape)], -1.0, 1.0)
+  flat = [sqrt2 * erf_inv(i) for i in flat]
   return reshape(flat, shape)
 
 def test_shift():
@@ -288,8 +284,9 @@ def repr_split(res):
       return String/Nil
 
 def main:
-  with IO:
+  #with IO:
     #* <- IO/print(test_hash())
     #* <- IO/print(test_bits())
     #return test_uniform()
-    return test_randint()
+    #return test_randint()
+  return normal(key(42), [6])

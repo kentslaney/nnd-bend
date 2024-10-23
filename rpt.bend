@@ -1,4 +1,5 @@
-from ./rng import (key, split, split_2, randint, bernoulli, zip)
+from ./rng import (key, split, split_2, randint, bernoulli)
+from ./util import zip
 
 def max_order_(bin, pos):
   if (bin >> pos) | (pos == 0):
