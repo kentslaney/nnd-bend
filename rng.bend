@@ -1,5 +1,5 @@
 # https://github.com/jax-ml/jax/blob/main/jax/_src/prng.py
-from ./util import (erf_inv, zip)
+from ./util import (zip, sided, select, erf_inv)
 
 # big endian
 nbits = 16
@@ -251,6 +251,43 @@ def normal_(flat):
 
 def normal(keys, shape):
   return reshape(normal_(uniform(keys, [shape_size(shape)], -1.0, 1.0)), shape)
+
+def partition_cutoffs(arr, splits, len, extra, i):
+  if i >= splits:
+    return List/Nil
+  else:
+    if i < extra:
+      size = i
+    else:
+      size = extra
+    cutoff = select(arr, size + len * i)
+    return List/Cons(cutoff, partition_cutoffs(arr, splits, len, extra, i + 1))
+
+def partition_mask(arr, cutoff):
+  match arr:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      return List/Cons(arr.head >= cutoff, partition_mask(arr.tail, cutoff))
+
+# < vs >=
+def partition_(arr, order, cutoffs):
+  match cutoffs:
+    case List/Nil:
+      return List/Cons(arr, List/Nil)
+    case List/Cons:
+      mask = partition_mask(order, cutoffs.head)
+      (res, nxt) = sided(zip(mask, arr))
+      (*, hi) = sided(zip(mask, order))
+      return List/Cons(res, partition_(nxt, hi, cutoffs.tail))
+
+def partition(rng, arr, limit):
+  (len, arr) = List/length(arr)
+  splits = len / limit + (len % limit > 0)
+  order = uniform_(rng, len)
+  extra = len % splits
+  cutoffs = partition_cutoffs(order, splits, len / splits, extra, 1)
+  return partition_(arr, order, cutoffs)
 
 def test_shift():
   (a0, a1) = rotate_left((0xDEAD, 0xBEEF), 4)

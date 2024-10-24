@@ -9,6 +9,21 @@ def zip(i0, i1):
     case _:
       return List/Nil
 
+def sided(it):
+  match it:
+    case List/Nil:
+      return (List/Nil, List/Nil)
+    case List/Cons:
+      l, r = sided(it.tail)
+      mask, data = it.head
+      if mask:
+        return (l, List/Cons(data, r))
+      else:
+        return (List/Cons(data, l), r)
+
+hvm inf -> (f24 -> f24):
+  ($([*7f8000] ret) ret)
+
 def median(arr):
   (len, arr) = List/length(arr)
   return select(arr, len / 2)

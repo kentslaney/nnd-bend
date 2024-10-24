@@ -1,11 +1,15 @@
-from ./rng import (key, uniform_)
-from ./util import (median)
+from ./rng import (key, uniform_, split_2, partition)
+from ./util import (select)
+
+def reverse(i):
+  if i > 0:
+    return List/Cons(i - 1, reverse(i - 1))
+  else:
+    return List/Nil
 
 def main:
-  arr = uniform_(key(42), 31)
-  pivot = median(arr)
-  lo = List/filter(arr, lambda x: x < pivot)
-  return List/length(lo)
+  arr = reverse(64)
+  return partition(key(42), arr, 30)
 
 #{
 from ./rng import (key, split_2, normal)
