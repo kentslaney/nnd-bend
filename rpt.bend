@@ -1,5 +1,5 @@
-from ./rng import (split, split_2, randint, bernoulli)
-from ./util import (zip, sided)
+from ./rng import (split, split_2, randint, bernoulli, partition)
+from ./util import (zip, sided, max)
 
 def max_order_(bin, pos):
   if (bin >> pos) | (pos == 0):
@@ -146,12 +146,7 @@ def postfix(arr, size):
       case _:
         return List/Nil
 
-def max(x, y):
-  if x > y:
-    return x
-  else:
-    return y
-
+# TODO: these should operate by index instead of value
 def degenerate(rng, data, size, args, j):
   (largest, total, *, bound) = args
   rng, subkey = split_2(rng)
@@ -163,7 +158,7 @@ def degenerate(rng, data, size, args, j):
     return degenerate(rng, data, bound, j)
   else:
     (l, r) = (DirectAccess/Leaf(l), DirectAccess/Leaf(r))
-    return (rng, DirectAccess/Node(j + side, l, r))
+    return DirectAccess/Node(j + side, l, r)
 
 def rp_split(rng, data, args, j, prev):
   (*, *, goal_leaf_size, bound) = args
@@ -184,7 +179,7 @@ def rp_split(rng, data, args, j, prev):
       return rp_split(rng, data, args, j, side)
     else:
       (l, r) = (DirectAccess/Leaf(l), DirectAccess/Leaf(r))
-      return (rng, DirectAccess/Node(j + side, l, r))
+      return DirectAccess/Node(j + side, l, r)
 
 def rp_tree_inner(rng, data, args, j):
   match data:
@@ -208,7 +203,7 @@ def rp_tree_inner(rng, data, args, j):
 
 def rp_tree_outer(rng, data, args, loops, i):
   if i >= loops:
-    return (rng, data)
+    return data
   else:
     (total, *, bound) = args
     largest = f24/to_u24(Math/ceil(u24/to_f24(total) * bound ** u24/to_f24(i)))
@@ -217,7 +212,7 @@ def rp_tree_outer(rng, data, args, loops, i):
     subkeys = split(rng, layer_size + 1)
     (rng, subkeys) = split_out(subkeys)
     subkeys = DirectAccess.create(subkeys)
-    (rng, data) = rp_tree_inner(subkeys, data, inner_args, 0)
+    data = rp_tree_inner(subkeys, data, inner_args, 0)
     return rp_tree_outer(rng, data, args, loops, i + 1)
 
 def rp_tree(rng, data, goal_leaf_size: u24, bound: f24):
@@ -226,6 +221,48 @@ def rp_tree(rng, data, goal_leaf_size: u24, bound: f24):
   min = max_order(total / goal_leaf_size + rem - 1) + 1
   args = (total, goal_leaf_size, bound)
   return rp_tree_outer(rng, DirectAccess/Leaf(data), args, min, 0)
+
+def flatten_(rng, data, limit):
+  match data:
+    case DirectAccess/Leaf:
+      (len, arr) = List/length(data.value)
+      if len > limit:
+        return partition(rng, arr, limit)
+      else:
+        return [arr]
+    case DirectAccess/Node:
+      (l, r) = split_2(rng)
+      (l, r) = (flatten_(l, data.left, limit), flatten_(r, data.right, limit))
+      return List/concat(l, r)
+
+def flatten_loop(it, limit):
+  match it:
+    case List/Cons:
+      (rng, data) = it.head
+      return List/Cons(flatten_(rng, data, limit), flatten_loop(it.tail, limit))
+    case List/Nil:
+      return List/Nil
+
+def flatten(rng, data, limit):
+  (len, data) = List/length(data)
+  subkeys = split(rng, len)
+  return List/flatten(flatten_loop(zip(subkeys, data), limit))
+
+def forest_(subkeys, data, limit, bound):
+  match subkeys:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      (rng, sub0) = split_2(subkeys.head)
+      (rng, sub1) = split_2(rng)
+      # TODO: get this working with one split
+      res = rp_tree(sub0, data, limit, bound)
+      res = flatten_(sub1, res, limit)
+      return List/Cons(res, forest_(subkeys.tail, data, limit, bound))
+
+def forest(rng, data, trees, goal_leaf_size: u24, bound: f24):
+  subkeys = split(rng, trees)
+  return List/flatten(forest_(subkeys, data, goal_leaf_size, bound))
 
 def main:
   return *

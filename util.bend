@@ -1,3 +1,9 @@
+def max(x, y):
+  if x > y:
+    return x
+  else:
+    return y
+
 def zip(i0, i1):
   match i0:
     case List/Cons:

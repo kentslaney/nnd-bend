@@ -1,3 +1,5 @@
+from ./util import (max)
+
 object Dual { approx, exact }
 
 type Avl:
@@ -11,12 +13,6 @@ type Avl:
 #    x   T3   - - - - - - - >        T1   y
 #   / \       < - - - - - - -            / \
 #  T1  T2     Left Rotation            T2  T3
-
-def max(x, y):
-  if x > y:
-    return x
-  else:
-    return y
 
 def abs(x):
   if x < +0:

@@ -270,7 +270,6 @@ def partition_mask(arr, cutoff):
     case List/Cons:
       return List/Cons(arr.head >= cutoff, partition_mask(arr.tail, cutoff))
 
-# < vs >=
 def partition_(arr, order, cutoffs):
   match cutoffs:
     case List/Nil:
