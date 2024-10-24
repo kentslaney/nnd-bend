@@ -13,10 +13,30 @@ def median(arr):
   (len, arr) = List/length(arr)
   return select(arr, len / 2)
 
+def select_fifth(arr):
+  match arr:
+    case List/Cons:
+      (out, nxt) = select5(arr, 2)
+      return List/Cons(out, select_fifth(nxt))
+    case List/Nil:
+      return List/Nil
+
+# arr is a list of unique f24s
 def select(arr, k):
   (len, arr) = List/length(arr)
-  # TODO: fitler by upper and lower bound
-  return *
+  if len <= 5:
+    (out, *) = select5(arr, k)
+    return out
+  else:
+    pivot = select(select_fifth(arr), len / 10)
+    lo = List/filter(arr, lambda x: x < pivot)
+    (size, lo) = List/length(lo)
+    if size > k:
+      return select(lo, k)
+    elif size == k:
+      return pivot
+    else:
+      return select(List/filter(arr, lambda x: x > pivot), k - size - 1)
 
 def select5_inner(arr, s, k, i, n):
   match arr:
@@ -64,9 +84,6 @@ def select5(arr, k):
     return select5_(arr, List/Nil, k, 4, 0)
   else:
     return select5_(arr, List/Nil, k, i - 1, 0)
-
-def main:
-  return select5([4, 2, 1, 3, 5, 0], 2)
 
 # via pyerf
 def polevl_(x, coefs, n):
