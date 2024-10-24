@@ -9,6 +9,65 @@ def zip(i0, i1):
     case _:
       return List/Nil
 
+def median(arr):
+  (len, arr) = List/length(arr)
+  return select(arr, len / 2)
+
+def select(arr, k):
+  (len, arr) = List/length(arr)
+  # TODO: fitler by upper and lower bound
+  return *
+
+def select5_inner(arr, s, k, i, n):
+  match arr:
+    case List/Nil:
+      return (s, n)
+    case List/Cons:
+      match s:
+        case List/Nil:
+          return (List/Cons(arr.head, List/Nil), 1)
+        case List/Cons:
+          if s.head <= arr.head:
+            if n > k:
+              return (s, n)
+            else:
+              return (List/Cons(arr.head, s), n + 1)
+          else:
+            (r, n) = select5_inner(arr, s.tail, k, i, n - 1)
+            if n <= k:
+              return (List/Cons(s.head, r), n + 1)
+            else:
+              return (r, n)
+
+def select5_(arr, s, k, i, n):
+  (s, n) = select5_inner(arr, s, k, i, n)
+  if i == 0:
+    match s:
+      case List/Cons:
+        match arr:
+          case List/Cons:
+            return s.head, arr.tail
+          case _:
+            return s.head, arr
+      case _:
+        return *
+  else:
+    match arr:
+      case List/Cons:
+        return select5_(arr.tail, s, k, i - 1, n)
+      case List/Nil:
+        return *
+
+def select5(arr, k):
+  (i, arr) = List/length(arr)
+  if i > 5:
+    return select5_(arr, List/Nil, k, 4, 0)
+  else:
+    return select5_(arr, List/Nil, k, i - 1, 0)
+
+def main:
+  return select5([4, 2, 1, 3, 5, 0], 2)
+
 # via pyerf
 def polevl_(x, coefs, n):
   match coefs:
@@ -130,6 +189,3 @@ def ndtri(y: f24):
 
 def erf_inv(z):
   return ndtri((z + 1.0) / 2.0) / Math/sqrt(2.0)
-
-def main:
-  return erf_inv(-0.9)
