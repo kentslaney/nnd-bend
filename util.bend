@@ -42,6 +42,28 @@ def select_fifth(arr):
     case List/Nil:
       return List/Nil
 
+def max_order_(bin, pos):
+  if (bin >> pos) | (pos == 0):
+    return pos
+  else:
+    return max_order_(bin, pos - 1)
+
+def max_order(bin):
+  return max_order_(bin, 23)
+
+def flip_(bin, pad, res, pos):
+  res = res << 1 | ((bin >> pos) & 1)
+  if pos < pad:
+    return flip_(bin, pad, res, pos + 1)
+  else:
+    return res
+
+def flip(bin: u24):
+  return flip_(bin, max_order(bin), 0, 0)
+
+def test_flip():
+  return flip(0b11001) == 0b10011
+
 # arr is a list of unique f24s
 def select(arr, k):
   (len, arr) = List/length(arr)
@@ -227,3 +249,51 @@ def ndtri(y: f24):
 
 def erf_inv(z):
   return ndtri((z + 1.0) / 2.0) / Math/sqrt(2.0)
+
+# make-shift interfaces
+# overhead is probably too high to be worth it (normally resolves at compile)
+# but I'll include in at least one commit since I tend to delete too much code
+
+object Interface { data, interfaces }
+object Comparable { lt, eq }
+
+def Comparable.interface_(arr):
+  match arr:
+    case List/Cons:
+      match arr.head:
+        case Comparable:
+          return arr.head
+        case _:
+          return Comparable.interface(arr.tail)
+    case List/Nil:
+      return *
+
+def Comparable.interface(self):
+  open Interface: self
+  return Comparable.interface_(self.interfaces)
+
+def Comparable.lt(a, b):
+  obj = Comparable.interface(a)
+  open Comparable: obj
+  return obj.lt(a, b)
+
+def Comparable.eq(a, b):
+  obj = Comparable.interface(a)
+  open Comparable: obj
+  return obj.eq(a, b)
+
+object Candidate { distance, index, flag }
+
+def Candidate.lt(a, b):
+  open Candidate: a
+  open Candidate: b
+  return a.distance < b.distance
+
+def Candidate.eq(a, b):
+  open Candidate: a
+  open Candidate: b
+  return (a.distance == b.distance) & (a.index == b.index)
+
+def Candidate.create(distance, index, flag):
+  data = Candidate(distance, index, flag)
+  return Interface(data, [Comparable(Candidate.lt, Candidate.eq)])

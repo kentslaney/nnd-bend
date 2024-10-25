@@ -1,27 +1,5 @@
 from ./rng import (split, split_2, randint, bernoulli, partition)
-from ./util import (zip, sided, max)
-
-def max_order_(bin, pos):
-  if (bin >> pos) | (pos == 0):
-    return pos
-  else:
-    return max_order_(bin, pos - 1)
-
-def max_order(bin):
-  return max_order_(bin, 23)
-
-def flip_(bin, pad, res, pos):
-  res = res << 1 | ((bin >> pos) & 1)
-  if pos < pad:
-    return flip_(bin, pad, res, pos + 1)
-  else:
-    return res
-
-def flip(bin: u24):
-  return flip_(bin, max_order(bin), 0, 0)
-
-def test_flip():
-  return flip(0b11001) == 0b10011
+from ./util import (zip, sided, max, max_order)
 
 type DirectAccess: # < index goes left
   Node { index, ~left, ~right }
@@ -283,6 +261,3 @@ def forest_(subkeys, data, limit, bound):
 def forest(rng, data, trees, goal_leaf_size: u24, bound: f24):
   subkeys = split(rng, trees)
   return List/flatten(forest_(subkeys, data, goal_leaf_size, bound))
-
-def main:
-  return *
