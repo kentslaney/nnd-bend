@@ -1,5 +1,5 @@
 from ./rng import (split, split_2, randint, bernoulli, partition)
-from ./util import (zip, sided, max, max_order)
+from ./util import (zip, sided, max, max_order, list_index)
 
 type DirectAccess: # < index goes left
   Node { index, ~left, ~right }
@@ -67,16 +67,6 @@ def sample(rng, start, end):
   second = unwrap_singleton(randint(second, [1], start, end - 1))
   second += second >= first
   return (rng, first, second)
-
-def list_index(arr, index):
-  match arr:
-    case List/Cons:
-      if index == 0:
-        return arr.head
-      else:
-        return list_index(arr.tail, index - 1)
-    case List/Nil:
-      return *
 
 def diff_tuple(it):
   match it:

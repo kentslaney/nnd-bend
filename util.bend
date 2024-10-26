@@ -64,6 +64,16 @@ def flip(bin: u24):
 def test_flip():
   return flip(0b11001) == 0b10011
 
+def list_index(arr, index):
+  match arr:
+    case List/Cons:
+      if index == 0:
+        return arr.head
+      else:
+        return list_index(arr.tail, index - 1)
+    case List/Nil:
+      return *
+
 # arr is a list of unique f24s
 def select(arr, k):
   (len, arr) = List/length(arr)

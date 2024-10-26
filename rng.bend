@@ -189,8 +189,8 @@ def split_2(keys):
       return List/Nil
 
 def bitcast_mantissa(x: u24) -> f24:
-  cast = u24/to_f24(x | significand_prefix) / u24/to_f24(significand_prefix)
-  return cast - 1.0
+  cast = u24/to_f24(x) / u24/to_f24(significand_prefix)
+  return cast
 
 def bitcast_32(x):
   (hi, *) = x
