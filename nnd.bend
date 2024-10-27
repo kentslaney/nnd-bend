@@ -1,4 +1,5 @@
-from ./util import (max_order)
+from ./rng import (randint, split)
+from ./util import (max_order, range, zip)
 
 object Candidate { distance, index, flag }
 
@@ -6,6 +7,8 @@ type Heap:
   Nil { ~left, ~right }
   Node { value, ~left, ~right }
   Leaf
+
+object Heaps { data, points, candidates }
 
 def Heap.create(n):
   if n == 0:
@@ -76,6 +79,27 @@ def Heap.check(self, i):
       return Heap.check(self.left) | Heap.check(self.right)
     case Heap/Leaf:
       return 0
+
+def Heaps.create_(points, candidates):
+  if points == 0:
+    return List/Nil
+  else:
+    rem = Heaps.create(points - 1, candidates)
+    return List/Cons(Heap.create(candidates), rem)
+
+def Heaps.create(points, candidates):
+  return Heaps(Heaps.create_(points, candidates), points, candidates)
+
+def Heaps.randomize_(rng, heaps, samples):
+  (len, samples) = List/length(samples)
+  match rng:
+    case List/Cons:
+      nxt = randint(rng.head, [heaps.points], 0, heaps.points - len)
+      #zip(
+
+def Heaps.randomize(rng, heaps):
+  rng = split(rng, heaps.candidates)
+  return *#Heaps.randomize_(, heaps, [range(heaps.points)])
 
 def main:
   return Heap.sift_down(Heap.replace(Heap.create(6), Candidate(1.0, 1, 1)))

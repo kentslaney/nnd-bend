@@ -74,6 +74,15 @@ def list_index(arr, index):
     case List/Nil:
       return *
 
+def range_(i, n):
+  if i < n:
+    return List/Cons(i, range_(i + 1, n))
+  else:
+    return List/Nil
+
+def range(n):
+  return range_(0, n)
+
 # arr is a list of unique f24s
 def select(arr, k):
   (len, arr) = List/length(arr)

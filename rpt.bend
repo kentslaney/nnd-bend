@@ -1,5 +1,5 @@
 from ./rng import (split, split_2, randint, bernoulli, partition)
-from ./util import (zip, sided, max, max_order, list_index)
+from ./util import (zip, sided, max, max_order, list_index, range)
 
 type DirectAccess: # < index goes left
   Node { index, ~left, ~right }
@@ -195,15 +195,6 @@ def rp_tree_outer(rng, data, args, loops, i):
     subkeys = DirectAccess.create(subkeys)
     data = rp_tree_inner(subkeys, data, inner_args, 0)
     return rp_tree_outer(rng, data, args, loops, i + 1)
-
-def range_(i, n):
-  if i < n:
-    return List/Cons(i, range_(i + 1, n))
-  else:
-    return List/Nil
-
-def range(n):
-  return range_(0, n)
 
 def rp_tree(rng, data, goal_leaf_size: u24, bound: f24):
   total = DirectAccess.length(data)
