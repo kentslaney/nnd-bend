@@ -1,5 +1,5 @@
 # https://github.com/jax-ml/jax/blob/main/jax/_src/prng.py
-from ./util import (zip, sided, select, erf_inv)
+from ./util import (zip, sided, select, erf_inv, reshape, shape_size)
 
 # big endian
 nbits = 16
@@ -103,34 +103,6 @@ def repr_hex_32(rtl, keys):
 def repr_hex_64(rtl, keys):
   (k0, k1, k2, k3) = keys
   return repr_hex_32(String/Cons(' ', repr_hex_32(rtl, (k2, k3))), (k0, k1))
-
-def reshape_(flat, shape):
-  match shape:
-    case List/Nil:
-      match flat:
-        case List/Nil:
-          return (List/Nil, List/Nil)
-        case List/Cons:
-          return (flat.head, flat.tail)
-    case List/Cons:
-      if shape.head == 0:
-        return (List/Nil, flat)
-      else:
-        reduced = List/Cons(shape.head - 1, shape.tail)
-        (subsection, flat) = reshape_(flat, shape.tail)
-        (section, flat) = reshape_(flat, reduced)
-        return (List/Cons(subsection, section), flat)
-
-def reshape(flat, shape):
-  (out, *) = reshape_(flat, shape)
-  return out
-
-def shape_size(shape):
-  match shape:
-    case List/Cons:
-      return shape.head * shape_size(shape.tail)
-    case List/Nil:
-      return 1
 
 def random_bits_(k0, k1, total, aliased, val, offset):
   if val > 1:

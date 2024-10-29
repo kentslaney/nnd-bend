@@ -1,4 +1,4 @@
-from ./util import (list_index)
+from ./util import (list_index, reshape, shape_size)
 
 npy_prefix = "NUMPY"
 
@@ -203,7 +203,7 @@ def parse_header(path):
     descr = parse_descr(get_unit(header, "descr"))
     fortran_order = String/equals(get_unit(header, "fortran_order"), "True")
     shape = to_nums(String/split(get_unit(header, "shape"), ','))
-    return (end, descr, fortran_order, shape)
+    return wrap((end, descr, fortran_order, shape))
 
 def parse_big_f8(bytes):
   match bytes:
@@ -255,7 +255,23 @@ def parse_lil_f8s(bytes):
       (res, rem) = flipped_end(bytes, 8)
       return List/Cons(parse_big_f8(res), parse_lil_f8s(rem))
 
-def read_body(path, start):
+def read_chunks(fd, n):
+  if n == 0:
+    with IO:
+      return wrap([])
+  else:
+    with IO:
+      reading <- IO/FS/read(fd, 1 << 13)
+      match reading:
+        case Result/Err:
+          return wrap([])
+        case Result/Ok:
+          res = parse_lil_f8s(reading.val)
+          rem <- read_chunks(fd, n - 1)
+          res = List/concat(res, rem)
+          return wrap(res)
+
+def read_body(path, start, n):
   with IO:
     res_fd <- IO/FS/open(path, "r")
     match res_fd:
@@ -264,22 +280,23 @@ def read_body(path, start):
       case Result/Ok:
         fd = res_fd.val
         seeking <- IO/FS/seek(fd, start, 0)
-        reading <- IO/FS/read(fd, 1 << 12)
+        reading <- read_chunks(fd, n)
         closing <- IO/FS/close(fd)
         match Result/and(seeking, closing):
           case Result/Err:
             return wrap("")
           case Result/Ok:
-            match reading:
-              case Result/Err:
-                return wrap("")
-              case Result/Ok:
-                return wrap(reading.val)
-      case Result/Err:
-        return wrap(Result/Err(res_fd.val))
+            return wrap(reading)
+
+def parse_body(path):
+  with IO:
+    (end, descr, fortran_order, shape) <- parse_header(path)
+    body <- read_body(path, end, shape_size(shape) / 1024 + 1)
+    return wrap(reshape(body, shape))
 
 def main:
   path = "/mnt/nnd-bend/float.npy"
   with IO:
-    body <- read_body(path, 128)
-    return parse_lil_f8s(body)
+    body <- parse_body(path)
+    (len, body) = List/length(body)
+    return len

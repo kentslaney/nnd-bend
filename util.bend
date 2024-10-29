@@ -83,6 +83,34 @@ def range_(i, n):
 def range(n):
   return range_(0, n)
 
+def reshape_(flat, shape):
+  match shape:
+    case List/Nil:
+      match flat:
+        case List/Nil:
+          return (List/Nil, List/Nil)
+        case List/Cons:
+          return (flat.head, flat.tail)
+    case List/Cons:
+      if shape.head == 0:
+        return (List/Nil, flat)
+      else:
+        reduced = List/Cons(shape.head - 1, shape.tail)
+        (subsection, flat) = reshape_(flat, shape.tail)
+        (section, flat) = reshape_(flat, reduced)
+        return (List/Cons(subsection, section), flat)
+
+def reshape(flat, shape):
+  (out, *) = reshape_(flat, shape)
+  return out
+
+def shape_size(shape):
+  match shape:
+    case List/Cons:
+      return shape.head * shape_size(shape.tail)
+    case List/Nil:
+      return 1
+
 # arr is a list of unique f24s
 def select(arr, k):
   (len, arr) = List/length(arr)
