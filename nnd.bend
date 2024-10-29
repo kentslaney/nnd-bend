@@ -1,4 +1,5 @@
-from ./rng import (randint, split)
+from ./rng import (choice,)
+from ./rng import (key, normal)
 from ./util import (max_order, range, zip)
 
 object Candidate { distance, index, flag }
@@ -84,22 +85,65 @@ def Heaps.create_(points, candidates):
   if points == 0:
     return List/Nil
   else:
-    rem = Heaps.create(points - 1, candidates)
+    rem = Heaps.create_(points - 1, candidates)
     return List/Cons(Heap.create(candidates), rem)
 
 def Heaps.create(points, candidates):
   return Heaps(Heaps.create_(points, candidates), points, candidates)
 
-def Heaps.randomize_(rng, heaps, samples):
-  (len, samples) = List/length(samples)
-  match rng:
+def Heaps.randomize_offset(data, n):
+  match data:
+    case List/Nil:
+      return (List/Nil, List/Nil)
     case List/Cons:
-      nxt = randint(rng.head, [heaps.points], 0, heaps.points - len)
-      #zip(
+      match data.head:
+        case List/Nil:
+          (res, rem) = Heaps.randomize_offset(data.tail, n + 1)
+          match res:
+            case List/Nil:
+              return (List/Nil, rem)
+            case List/Cons:
+              return (List/Nil, List/Cons(res, rem))
+        case List/Cons:
+          rem = List/Cons(data.head.tail, data.tail)
+          (res, rem) = Heaps.randomize_offset(rem, n)
+          if data.head.head >= n:
+            off = data.head.head + 1
+          else:
+            off = data.head.head
+          return (List/Cons(off, res), rem)
 
-def Heaps.randomize(rng, heaps):
-  rng = split(rng, heaps.candidates)
-  return *#Heaps.randomize_(, heaps, [range(heaps.points)])
+def Heap.candidate(data, i, j):
+  return Candidate(u24/to_f24(j), j, 1) # TODO
+
+def Heaps.randomize_(heaps, candidates, data, n):
+  match candidates:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      match heaps:
+        case List/Nil:
+          return List/Nil
+        case List/Cons:
+          match candidates.head:
+            case List/Nil:
+              rem = Heaps.randomize_(heaps.tail, candidates.tail, data, n + 1)
+              return List/Cons(heaps.head, rem)
+            case List/Cons:
+              res = Heap.candidate(data, n, candidates.head.head)
+              res = Heap.sift_down(Heap.replace(heaps.head, res))
+              res = List/Cons(res, heaps.tail)
+              rem = List/Cons(candidates.head.tail, candidates.tail)
+              return Heaps.randomize_(res, rem, data, n)
+
+def Heaps.randomize(rng, data, candidates):
+  (points, data) = List/length(data) # TODO: replace with DirectAccess or Map
+  samples = choice(rng, points - 1, candidates, points)
+  (res, rem) = Heaps.randomize_offset(samples, 0)
+  samples = List/Cons(res, rem)
+  res = Heaps.create(points, candidates)
+  open Heaps: res
+  return Heaps(Heaps.randomize_(res.data, samples, data, 0), points, candidates)
 
 def main:
-  return Heap.sift_down(Heap.replace(Heap.create(6), Candidate(1.0, 1, 1)))
+  return Heaps.randomize(key(42), normal(key(42), [8, 3]), 4)

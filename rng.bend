@@ -288,6 +288,58 @@ def partition(rng, arr, limit):
   cutoffs = partition_cutoffs(order, splits, len / splits, extra, 1)
   return partition_(arr, order, cutoffs)
 
+def choice_init(rng, n, samples):
+  match rng:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      res = randint_(rng.head, samples, 0, n)
+      return List/Cons(res, choice_init(rng.tail, n - 1, samples))
+
+def choice_t(data):
+  match data:
+    case List/Nil:
+      return (List/Nil, List/Nil)
+    case List/Cons:
+      match data.head:
+        case List/Nil:
+          return (List/Nil, List/Nil)
+        case List/Cons:
+          (res, rem) = choice_t(data.tail)
+          return List/Cons(data.head.head, res), List/Cons(data.head.tail, rem)
+
+def choice_offset_(data, pfx):
+  match pfx:
+    case List/Nil:
+      return [data]
+    case List/Cons:
+      if data >= pfx.head:
+        return List/Cons(pfx.head, choice_offset_(data + 1, pfx.tail))
+      else:
+        return List/Cons(data, pfx)
+
+def choice_offset(data, pfx):
+  match data:
+    case List/Nil:
+      return pfx
+    case List/Cons:
+      return choice_offset(data.tail, choice_offset_(data.head, pfx))
+
+def choice_(data):
+  match data:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      (res, rem) = choice_t(data)
+      match rem:
+        case List/Cons:
+          return List/Cons(choice_offset(res, List/Nil), choice_(rem))
+        case List/Nil:
+          return List/Nil
+
+def choice(rng, n, k, samples):
+  return choice_(choice_init(split(rng, k), n, samples))
+
 def test_shift():
   (a0, a1) = rotate_left((0xDEAD, 0xBEEF), 4)
   (b0, b1) = rotate_left((0xDEAD, 0xBEEF), 24)
@@ -331,4 +383,5 @@ def main:
     #* <- IO/print(test_bits())
     #return test_uniform()
     #return test_randint()
-  return normal(key(42), [6])
+  #return normal(key(42), [6])
+  return choice(key(42), 8, 4, 16)
