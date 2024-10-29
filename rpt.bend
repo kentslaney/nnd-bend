@@ -1,47 +1,6 @@
 from ./rng import (split, split_2, randint, bernoulli, partition)
 from ./util import (zip, sided, max, max_order, list_index, range)
-
-type DirectAccess: # < index goes left
-  Node { index, ~left, ~right }
-  Leaf { value }
-
-def DirectAccess.create_(arr, len, el):
-  if len == 1:
-    match arr:
-      case List/Nil:
-        return (DirectAccess/Leaf(List/Nil), List/Nil)
-      case List/Cons:
-        return (DirectAccess/Leaf(arr.head), arr.tail)
-  else:
-    (tree0, arr) = DirectAccess.create_(arr, len / 2, el)
-    (tree1, arr) = DirectAccess.create_(arr, len / 2 + (len % 2), el + len / 2)
-    return (DirectAccess/Node(el + len / 2, tree0, tree1), arr)
-
-def DirectAccess.create(arr):
-  (len, arr) = List/length(arr)
-  (res, *) = DirectAccess.create_(arr, len, 0)
-  return res
-
-def DirectAccess.get(self, el):
-  match self:
-    case DirectAccess/Node:
-      if el < self.index:
-        return DirectAccess.get(self.left, el)
-      else:
-        return DirectAccess.get(self.right, el)
-    case DirectAccess/Leaf:
-      return self.value
-
-def DirectAccess.length(self):
-  match self:
-    case DirectAccess/Node:
-      res = DirectAccess.length(self.right)
-      if res == 1:
-        return self.index + 1
-      else:
-        return res
-    case DirectAccess/Leaf:
-      return 1
+from ./map import *
 
 def split_out(subkeys):
   match subkeys:
@@ -197,7 +156,7 @@ def rp_tree_outer(rng, data, args, loops, i):
     return rp_tree_outer(rng, data, args, loops, i + 1)
 
 def rp_tree(rng, data, goal_leaf_size: u24, bound: f24):
-  total = DirectAccess.length(data)
+  (total, data) = DirectAccess.length(data)
   rem = (total % goal_leaf_size) > 0
   min = max_order(total / goal_leaf_size + rem - 1) + 1
   args = (total, goal_leaf_size, bound, data)
