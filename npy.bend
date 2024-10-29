@@ -23,12 +23,12 @@ def take(arr, n):
       else:
         return List/Cons(arr.head, take(arr.tail, n - 1))
 
-def bytes_to_u24(bytes, init):
+def bytes_to_u24(bytes):
   match bytes:
     case List/Cons:
-      return bytes_to_u24(bytes.tail, (init << 8) | bytes.head)
+      return bytes_to_u24(bytes.tail) << 8 | bytes.head
     case List/Nil:
-      return init
+      return 0
 
 def header_bounds(path):
   with IO:
@@ -76,9 +76,10 @@ def header_bounds(path):
                                     size = 2
                                   else:
                                     size = 4
-                                  substr = take(version, size)
-                                  end = bytes_to_u24(substr, 0) / 2
-                                  return wrap((8 + size, end))
+                                  substr = take(minor.tail, size)
+                                  start = 8 + size
+                                  extra = bytes_to_u24(substr, 0)
+                                  return wrap((start, start + extra))
 
 def read_header(path, start, end):
   with IO:
@@ -294,9 +295,42 @@ def parse_body(path):
     body <- read_body(path, end, shape_size(shape) / 1024 + 1)
     return wrap(reshape(body, shape))
 
+def int_str(int):
+  if int == 0:
+    return ""
+  else:
+    return List/concat(int_str(int / 10), List/Cons((int % 10) + '0', List/Nil))
+
+def shape_str(shape):
+  match shape:
+    case List/Cons:
+      res = int_str(shape.head)
+      rem = shape_str(shape.tail)
+      match rem:
+        case List/Nil:
+          return res
+        case List/Cons:
+          return List/concat(List/concat(res, ", "), rem)
+    case List/Nil:
+      return List/Nil
+
+def space_pads(n):
+  if n == 0:
+    return List/Nil
+  else:
+    return List/Cons(' ', space_pads(n - 1))
+
+def create_header(shape: List(List(u24))):
+  magic = List/Cons(0x93, npy_prefix)
+  vers_size = [1, 0, 0x76, 0]
+  preamble = List/concat(magic, vers_size)
+  descr = "{'descr': '<u8', 'fortran_order': False, 'shape': ("
+  descr = String/encode_utf8(descr)
+  descr = List/concat(descr, shape_str(shape))
+  iption = String/encode_utf8(")}")
+  content = List/concat(preamble, List/concat(descr, iption))
+  (len, content) = List/length(content)
+  return List/concat(List/concat(content, space_pads(127 - len)), ['\n'])
+
 def main:
-  path = "/mnt/nnd-bend/float.npy"
-  with IO:
-    body <- parse_body(path)
-    (len, body) = List/length(body)
-    return len
+  return String/decode_ascii(create_header([256, 8]))
