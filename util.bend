@@ -142,6 +142,12 @@ def shape_size(shape):
     case List/Nil:
       return 1
 
+def repeat(x, n):
+  if n == 0:
+    return List/Nil
+  else:
+    return List/Cons(x, space_pads(x, n - 1))
+
 # arr is a list of unique f24s
 def select(arr, k):
   (len, arr) = List/length(arr)

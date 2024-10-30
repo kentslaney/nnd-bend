@@ -1,6 +1,6 @@
 from ./util import (max)
 
-object Dual { approx, exact }
+object Dual { approx, exact, flag }
 
 type Avl:
   Node { key, height, ~left, ~right }
@@ -288,16 +288,16 @@ def Avl.remove(root, key):
 
 def main():
   root = Avl/Leaf()
-  root = Avl.insert(root, Dual(0.0, +9))
-  root = Avl.insert(root, Dual(0.0, +5))
-  root = Avl.insert(root, Dual(0.0, +10))
-  root = Avl.insert(root, Dual(0.0, +0))
-  root = Avl.insert(root, Dual(0.0, +6))
-  root = Avl.insert(root, Dual(0.0, +11))
-  root = Avl.insert(root, Dual(0.0, -1))
-  root = Avl.insert(root, Dual(0.0, +1))
-  root = Avl.insert(root, Dual(0.0, +2))
-  root = Avl.remove(root, Dual(0.0, +10))
+  root = Avl.insert(root, Dual(0.0, +9, 0))
+  root = Avl.insert(root, Dual(0.0, +5, 0))
+  root = Avl.insert(root, Dual(0.0, +10, 0))
+  root = Avl.insert(root, Dual(0.0, +0, 0))
+  root = Avl.insert(root, Dual(0.0, +6, 0))
+  root = Avl.insert(root, Dual(0.0, +11, 0))
+  root = Avl.insert(root, Dual(0.0, -1, 0))
+  root = Avl.insert(root, Dual(0.0, +1, 0))
+  root = Avl.insert(root, Dual(0.0, +2, 0))
+  root = Avl.remove(root, Dual(0.0, +10, 0))
   with IO:
     * <- IO/print(Avl.repr(root))
     return *

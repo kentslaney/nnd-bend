@@ -1,4 +1,4 @@
-from ./util import (list_index, reshape, shape_size, take)
+from ./util import (list_index, reshape, shape_size, take, repeat)
 
 npy_prefix = "NUMPY"
 
@@ -302,12 +302,6 @@ def shape_str(shape):
     case List/Nil:
       return List/Nil
 
-def space_pads(n):
-  if n == 0:
-    return List/Nil
-  else:
-    return List/Cons(' ', space_pads(n - 1))
-
 def create_header(shape: List(List(u24))):
   magic = List/Cons(0x93, npy_prefix)
   vers_size = [1, 0, 0x76, 0]
@@ -318,7 +312,7 @@ def create_header(shape: List(List(u24))):
   iption = String/encode_utf8(")}")
   content = List/concat(preamble, List/concat(descr, iption))
   (len, content) = List/length(content)
-  return List/concat(List/concat(content, space_pads(127 - len)), ['\n'])
+  return List/concat(List/concat(content, repeat(' ', 127 - len)), ['\n'])
 
 def flatten_(data, shape):
   match shape:
