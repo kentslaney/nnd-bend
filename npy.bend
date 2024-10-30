@@ -324,7 +324,7 @@ def create_header(shape: List(List(u24))):
   magic = List/Cons(0x93, npy_prefix)
   vers_size = [1, 0, 0x76, 0]
   preamble = List/concat(magic, vers_size)
-  descr = "{'descr': '<u8', 'fortran_order': False, 'shape': ("
+  descr = "{'descr': '<u4', 'fortran_order': False, 'shape': ("
   descr = String/encode_utf8(descr)
   descr = List/concat(descr, shape_str(shape))
   iption = String/encode_utf8(")}")
@@ -332,5 +332,36 @@ def create_header(shape: List(List(u24))):
   (len, content) = List/length(content)
   return List/concat(List/concat(content, space_pads(127 - len)), ['\n'])
 
-def main:
-  return String/decode_ascii(create_header([256, 8]))
+def flatten_(data, shape):
+  match shape:
+    case List/Nil:
+      return data
+    case List/Cons:
+      return List/flatten(flatten_(data, shape.tail))
+
+def flatten(data, shape):
+  match shape:
+    case List/Nil:
+      return data
+    case List/Cons:
+      return flatten_(data, shape.tail)
+
+def to_lil_bytes(x, n):
+  if n == 0:
+    return List/Nil
+  else:
+    return List/Cons(x & 0xff, to_lil_bytes(x >> 8, n - 1))
+
+def to_u32s(x):
+  match x:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      return List/concat(to_lil_bytes(x.head, 4), to_u32s(x.tail))
+
+def npy_data(data, shape):
+  return List/concat(create_header(shape), to_u32s(flatten(data, shape)))
+
+def save_npy(path, data, shape):
+  with IO:
+    return IO/FS/write_file(path, npy_data(data, shape))

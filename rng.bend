@@ -348,12 +348,3 @@ def repr_split(res):
       return repr_hex_64(String/Cons('\n', res.tail), (x0, x1, x2, x3))
     case List/Nil:
       return String/Nil
-
-def main:
-  #with IO:
-    #* <- IO/print(test_hash())
-    #* <- IO/print(test_bits())
-    #return test_uniform()
-    #return test_randint()
-  #return normal(key(42), [6])
-  return choice(key(42), 8, 4, 16)

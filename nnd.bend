@@ -163,7 +163,3 @@ def Heaps.randomize(rng, data, candidates):
   open Heaps: res
   out = Heaps.randomize_(res.data, samples, data, 0, res.dist)
   return Heaps(out, points, candidates, res.dist)
-
-def main:
-  data = DirectAccess.create(normal(key(42), [8, 3]))
-  return Heaps.randomize(key(42), data, 4)

@@ -1,9 +1,6 @@
-from ./rng import (key, split_2, normal)
-from ./rpt import (forest, DirectAccess.create)
+from ./npy import *
+from ./rng import *
 
 def main:
-  rng = key(0)
-  (subkey0, rng) = split_2(rng)
-  (subkey1, rng) = split_2(rng)
-  data = DirectAccess.create(normal(subkey0, [256, 8]))
-  return forest(subkey1, data, 3, 30, 0.75)
+  data = randint(key(42), [4, 6, 2], 0, 100)
+  return save_npy("/mnt/nnd-bend/out.npy", data, [4, 6, 2])
