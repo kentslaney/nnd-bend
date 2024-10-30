@@ -1,5 +1,5 @@
 from ./map import *
-from ./rng import (choice,)
+from ./rng import (choice, uniform)
 from ./rng import (key, normal)
 from ./util import (max_order, range, zip)
 
@@ -10,7 +10,7 @@ type Heap:
   Node { value, ~left, ~right }
   Leaf
 
-object Heaps { data, points, candidates, dist }
+object Heaps { data, points, k, dist }
 
 def Heap.create(n):
   if n == 0:
@@ -96,16 +96,16 @@ def euclidean_(a, b):
 def euclidean(a, b):
   return Math/sqrt(euclidean_(a, b))
 
-def Heaps.create_(points, candidates):
+def Heaps.create_(points, k):
   if points == 0:
     return List/Nil
   else:
-    rem = Heaps.create_(points - 1, candidates)
-    return List/Cons(Heap.create(candidates), rem)
+    rem = Heaps.create_(points - 1, k)
+    return List/Cons(Heap.create(k), rem)
 
-def Heaps.create(points, candidates):
-  res = Heaps.create_(points, candidates)
-  return Heaps(res, points, candidates, euclidean)
+def Heaps.create(points, k):
+  res = Heaps.create_(points, k)
+  return Heaps(res, points, k, euclidean)
 
 def Heaps.randomize_offset(data, n):
   match data:
@@ -154,12 +154,19 @@ def Heaps.randomize_(heaps, candidates, data, n, dist):
               rem = List/Cons(candidates.head.tail, candidates.tail)
               return Heaps.randomize_(res, rem, data, n, dist)
 
-def Heaps.randomize(rng, data, candidates):
+def Heaps.randomize(rng, data, k):
   (points, data) = DirectAccess.length(data)
-  samples = choice(rng, points - 1, candidates, points)
+  samples = choice(rng, points - 1, k, points)
   (res, rem) = Heaps.randomize_offset(samples, 0)
   samples = List/Cons(res, rem)
-  res = Heaps.create(points, candidates)
+  res = Heaps.create(points, k)
   open Heaps: res
   out = Heaps.randomize_(res.data, samples, data, 0, res.dist)
-  return Heaps(out, points, candidates, res.dist)
+  return Heaps(out, points, k, res.dist)
+
+def Heaps.build(rng, heaps, limit):
+  open Heaps: heaps
+  old = Heaps.create(heaps.points, limit)
+  new = Heaps.create(heaps.points, limit)
+  d = uniform(rng, [heaps.points, heaps.k], 0, 1)
+  return *
