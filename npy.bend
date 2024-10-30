@@ -101,8 +101,6 @@ def read_header(path, start, end):
                 return wrap("")
               case Result/Ok:
                 return wrap(String/decode_utf8(reading.val))
-      case Result/Err:
-        return wrap(Result/Err(res_fd.val))
 
 def strip_tail_(str, val):
   match str:
