@@ -1,4 +1,4 @@
-from ./util import (list_index, reshape, shape_size)
+from ./util import (list_index, reshape, shape_size, take)
 
 npy_prefix = "NUMPY"
 
@@ -12,16 +12,6 @@ def match_prefix(str, prefix):
           return List/Nil
         case List/Cons:
           return match_prefix(str.tail, prefix.tail)
-
-def take(arr, n):
-  match arr:
-    case List/Nil:
-      return List/Nil
-    case List/Cons:
-      if n == 0:
-        return List/Nil
-      else:
-        return List/Cons(arr.head, take(arr.tail, n - 1))
 
 def bytes_to_u24(bytes):
   match bytes:

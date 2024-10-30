@@ -1,5 +1,5 @@
 from ./rng import (split, split_2, randint, bernoulli, partition)
-from ./util import (zip, sided, max, max_order, list_index, range)
+from ./util import (zip, sided, max, max_order, list_index, range, postfix)
 from ./map import *
 
 def split_out(subkeys):
@@ -75,16 +75,6 @@ def lr_split(delta, boundary, data, ref):
         return (l, List/Cons(data.head, r))
       else:
         return (List/Cons(data.head, l), r)
-
-def postfix(arr, size):
-  if size == 0:
-    return arr
-  else:
-    match arr:
-      case List/Cons:
-        return postfix(arr.tail, size - 1)
-      case _:
-        return List/Nil
 
 def degenerate(rng, data, size, args, j):
   (largest, total, *, bound, *) = args

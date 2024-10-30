@@ -1,7 +1,7 @@
 from ./map import *
 from ./rng import (choice, uniform)
 from ./rng import (key, normal)
-from ./util import (max_order, range, zip)
+from ./util import (max_order, range, zip, take, split_after)
 
 object Candidate { distance, index, flag }
 
@@ -164,9 +164,55 @@ def Heaps.randomize(rng, data, k):
   out = Heaps.randomize_(res.data, samples, data, 0, res.dist)
   return Heaps(out, points, k, res.dist)
 
+def Heaps.build_inner(heaps, d, old, new):
+  match d:
+    case List/Nil:
+      return Heap/Leaf
+    case List/Cons:
+      (len, d) = List/length(d)
+      hi = 1 << max_order(len)
+      (l, r) = split_after(d, hi - 1)
+      match r:
+        case List/Nil:
+          (d, r) = (*, *)
+        case List/Cons:
+          (d, r) = (r.head, r.tail)
+      match heaps:
+        case Heap/Leaf:
+          (l, r) = (l, r)
+        case _:
+          match old:
+            case Heaps/Leaf:
+              (l, r) = (l, r)
+            case _:
+              match new:
+                case Heaps/Leaf:
+                  (l, r) = (l, r)
+                case _:
+                  l = Heaps.build_inner(heaps.left, l, old.left, new.left)
+                  r = Heaps.build_inner(heaps.right, r, old.right, new.right)
+      match heaps:
+        case Heap/Leaf:
+          return Heap/Leaf
+        case Heap/Nil:
+          *
+        case Heap/Node:
+          *
+
+def Heaps.build_(args):
+  match args:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      (heaps, d, old, new) = args.head
+      res = Heaps.build_inner(heaps, d, old, new)
+      return List/Cons(res, Heaps.build(args.tail))
+
 def Heaps.build(rng, heaps, limit):
   open Heaps: heaps
   old = Heaps.create(heaps.points, limit)
   new = Heaps.create(heaps.points, limit)
   d = uniform(rng, [heaps.points, heaps.k], 0, 1)
-  return *
+  open Heaps: old
+  open Heaps: new
+  return Heaps.build_(zip(heaps.data, zip(d, zip(old.data, new.data))))

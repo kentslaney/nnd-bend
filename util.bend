@@ -27,6 +27,37 @@ def sided(it):
       else:
         return (List/Cons(data, l), r)
 
+def take(arr, n):
+  match arr:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      if n == 0:
+        return List/Nil
+      else:
+        return List/Cons(arr.head, take(arr.tail, n - 1))
+
+def postfix(arr, size):
+  if size == 0:
+    return arr
+  else:
+    match arr:
+      case List/Cons:
+        return postfix(arr.tail, size - 1)
+      case _:
+        return List/Nil
+
+def split_after(arr, n):
+  if n == 0:
+    return (List/Nil, arr)
+  else:
+    match arr:
+      case List/Nil:
+        return List/Nil
+      case List/Cons:
+        (pre, post) = split_after(arr.tail)
+        return (List/Cons(arr.head, pre), post)
+
 hvm inf -> (f24 -> f24):
   ($([*7f8000] ret) ret)
 
