@@ -1,7 +1,6 @@
 from ./map import *
-from ./rng import (choice, uniform)
-from ./rng import (key, normal)
-from ./util import (max_order, range, zip, take, split_after)
+from ./rng import (choice,)
+from ./util import (max_order, range, zip)
 
 object Candidate { distance, index, flag }
 

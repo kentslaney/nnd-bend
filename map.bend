@@ -39,4 +39,3 @@ def DirectAccess.length(self):
         return res, self
     case DirectAccess/Leaf:
       return 1, self
-
