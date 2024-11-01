@@ -32,8 +32,6 @@ def resize(rng, arr, limit):
     d = uniform_(rng, total)
     cutoff = select(d, limit)
     return (limit, cutoff_mask(zip(d, arr), cutoff))
-  elif len < limit:
-    return (len, List/concat(arr, repeat(-1, limit - len)))
   else:
     return (len, arr)
 

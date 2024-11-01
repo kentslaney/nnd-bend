@@ -1,10 +1,14 @@
-from ./util import (max)
-
-object Dual { approx, exact, data }
+from ./util import (max,)
 
 type Avl:
   Node { key, height, ~left, ~right }
   Leaf
+
+# leaves are always largest if compared
+type AvlKey:
+  Single { key, data }
+  Double { key0, key1, data }
+  Dual { approx, exact, data }
 
 # https://www.geeksforgeeks.org/insertion-in-an-avl-tree/
 #
@@ -79,31 +83,71 @@ def Avl.close(approx0, approx1):
   return abs(approx0 - approx1) / max(0.00001, abs(approx0 + approx1)) < 0.00001
 
 def Avl.sign(key, y):
-  open Dual: key
   match y:
     case Avl/Leaf:
       return -1
     case Avl/Node:
-      open Dual: y.key
-      if Avl.close(key.approx, y.key.approx):
-        if key.exact == y.key.exact:
-          return +0
-        elif key.exact > y.key.exact:
-          return +1
-        else:
-          return -1
-      else:
-        if key.approx > y.key.approx:
-          return +1
-        else:
-          return -1
+      match key:
+        case AvlKey/Single:
+          match y.key:
+            case AvlKey/Single:
+              if key.key == y.key.key:
+                return +0
+              elif key.key > y.key.key:
+                return +1
+              else:
+                return -1
+            case _:
+              return -1
+        case AvlKey/Double:
+          match y.key:
+            case AvlKey/Double:
+              if key.key0 == y.key.key0:
+                if key.key1 == y.key.key1:
+                  return +0
+                elif key.key1 > y.key.key1:
+                  return +1
+                else:
+                  return -1
+              else:
+                if key.key0 > y.key.key0:
+                  return +1
+                else:
+                  return -1
+            case AvlKey/Single:
+              return +1
+            case AvlKey/Dual:
+              return -1
+        case AvlKey/Dual:
+          match y.key:
+            case AvlKey/Dual:
+              if Avl.close(key.approx, y.key.approx):
+                if key.exact == y.key.exact:
+                  return +0
+                elif key.exact > y.key.exact:
+                  return +1
+                else:
+                  return -1
+              else:
+                if key.approx > y.key.approx:
+                  return +1
+                else:
+                  return -1
+            case _:
+              return +1
 
-def Avl.sum(x):
-  match x:
-    case Avl/Leaf:
-      return 0
-    case Avl/Node:
-      return x.key + Avl.sum(x.left) + Avl.sum(x.right)
+def Avl.repr_key(rtl, key, height):
+  match key:
+    case AvlKey/Single:
+      rtl = String/Cons(' ', Avl.repr_int(rtl, height))
+      return String/Cons(' ', Avl.repr_int(rtl, key.key))
+    case AvlKey/Double:
+      rtl = String/Cons(' ', Avl.repr_int(rtl, height))
+      rtl = String/Cons(' ', Avl.repr_int(rtl, key.key1))
+      return String/Cons(' ', Avl.repr_int(rtl, key.key0))
+    case AvlKey/Dual:
+      rtl = String/Cons(' ', Avl.repr_int(rtl, height))
+      return String/Cons(' ', Avl.repr_int(rtl, key.exact))
 
 def Avl.repr(x):
   return Avl.walk(x, String/Nil, +0, String/Nil)
@@ -111,15 +155,10 @@ def Avl.repr(x):
 def Avl.repr_int(rtl, key):
   if key < +0:
     return String/Cons('-', Avl.repr_int(rtl, -1 * key))
-  elif key >= 10:
-    return Avl.repr_int(String/Cons((key % 10) + 48, rtl), key / 10)
+  elif key >= +10:
+    return Avl.repr_int(String/Cons((key % 10) + '0', rtl), key / 10)
   else:
-    return String/Cons(key + 48, rtl)
-
-def Avl.repr_key(rtl, key, height):
-  open Dual: key
-  use eol = String/Cons(' ', Avl.repr_int(rtl, height))
-  return String/Cons(' ', Avl.repr_int(eol, key.exact))
+    return String/Cons(key + '0', rtl)
 
 def Avl.empty(x):
   match x:
@@ -338,17 +377,17 @@ def Avl.join(k, l, r):
 def Avl.split(t, k):
   match t:
     case Avl/Leaf:
-      return 0, Avl/Leaf, Avl/Leaf
+      return (0, k, Avl/Leaf, Avl/Leaf)
     case Avl/Node:
       sign = Avl.sign(k, t)
       if sign == +0:
-        return (1, t.left, t.right)
+        return (1, t.key, t.left, t.right)
       elif sign == -1:
-        (b, l, r) = Avl.split(t.left, k)
-        return (b, l, Avl.join(t.key, r, t.right))
+        (b, m, l, r) = Avl.split(t.left, k)
+        return (b, m, l, Avl.join(t.key, r, t.right))
       else:
-        (b, l, r) = Avl.split(t.right, k)
-        return (b, Avl.join(t.key, l, t.left), r)
+        (b, m, l, r) = Avl.split(t.right, k)
+        return (b, m, Avl.join(t.key, l, t.left), r)
 
 def Avl.union(t0, t1):
   match t0:
@@ -359,31 +398,31 @@ def Avl.union(t0, t1):
         case Avl/Leaf:
           return t0
         case Avl/Node:
-          (b, l, r) = Avl.split(t1, t0.key)
-          return Avl.join(t0.key, Avl.union(t0.left, l), Avl.union(t0.right, r))
+          (b, m, l, r) = Avl.split(t1, t0.key)
+          return Avl.join(m, Avl.union(t0.left, l), Avl.union(t0.right, r))
 
 def main():
   emus = Avl/Leaf()
-  emus = Avl.insert(emus, Dual(0.0, +9, 0))
-  emus = Avl.insert(emus, Dual(0.0, +5, 0))
-  emus = Avl.insert(emus, Dual(0.0, +10, 0))
-  emus = Avl.insert(emus, Dual(0.0, +0, 0))
-  emus = Avl.insert(emus, Dual(0.0, +6, 0))
-  emus = Avl.insert(emus, Dual(0.0, +11, 0))
-  emus = Avl.insert(emus, Dual(0.0, -1, 0))
-  emus = Avl.insert(emus, Dual(0.0, +1, 0))
-  emus = Avl.insert(emus, Dual(0.0, +2, 0))
-  emus = Avl.remove(emus, Dual(0.0, +10, 0))
+  emus = Avl.insert(emus, AvlKey/Single(+9, 0))
+  emus = Avl.insert(emus, AvlKey/Single(+5, 0))
+  emus = Avl.insert(emus, AvlKey/Single(+10, 0))
+  emus = Avl.insert(emus, AvlKey/Single(+0, 0))
+  emus = Avl.insert(emus, AvlKey/Single(+6, 0))
+  emus = Avl.insert(emus, AvlKey/Single(+11, 0))
+  emus = Avl.insert(emus, AvlKey/Single(-1, 0))
+  emus = Avl.insert(emus, AvlKey/Single(+1, 0))
+  emus = Avl.insert(emus, AvlKey/Single(+2, 0))
+  emus = Avl.remove(emus, AvlKey/Single(+10, 0))
   roos = Avl/Leaf()
-  roos = Avl.insert(roos, Dual(0.0, +7, 0))
-  roos = Avl.insert(roos, Dual(0.0, +3, 0))
-  roos = Avl.insert(roos, Dual(0.0, +4, 0))
-  roos = Avl.insert(roos, Dual(0.0, +8, 0))
-  roos = Avl.insert(roos, Dual(0.0, +12))
-  roos = Avl.insert(roos, Dual(0.0, -2, 0))
-  roos = Avl.insert(roos, Dual(0.0, -4, 0))
-  roos = Avl.insert(roos, Dual(0.0, +13, 0))
-  roos = Avl.insert(roos, Dual(0.0, -3, 0))
+  roos = Avl.insert(roos, AvlKey/Single(+7, 0))
+  roos = Avl.insert(roos, AvlKey/Single(+3, 0))
+  roos = Avl.insert(roos, AvlKey/Single(+4, 0))
+  roos = Avl.insert(roos, AvlKey/Single(+8, 0))
+  roos = Avl.insert(roos, AvlKey/Single(+12, 0))
+  roos = Avl.insert(roos, AvlKey/Single(-2, 0))
+  roos = Avl.insert(roos, AvlKey/Single(-4, 0))
+  roos = Avl.insert(roos, AvlKey/Single(+13, 0))
+  roos = Avl.insert(roos, AvlKey/Single(-3, 0))
   emus = Avl.union(emus, roos)
   with IO:
     * <- IO/print(Avl.repr(emus))
