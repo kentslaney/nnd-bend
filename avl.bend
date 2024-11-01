@@ -1,6 +1,6 @@
 from ./util import (max)
 
-object Dual { approx, exact, flag }
+object Dual { approx, exact, data }
 
 type Avl:
   Node { key, height, ~left, ~right }
@@ -69,9 +69,9 @@ def Avl.cmp(x, y):
     case Avl/Leaf:
       match y:
         case Avl/Leaf:
-          return 0
+          return +0
         case Avl/Node:
-          return 1
+          return +1
     case Avl/Node:
       return Avl.sign(x.key, y)
 
@@ -286,18 +286,105 @@ def Avl.remove(root, key):
             root = root
           return Avl.re_balance(root, balance)
 
+# https://en.wikipedia.org/w/index.php?title=AVL_tree&oldid=1252999213#Set_operations_and_bulk_operations
+def Avl.joinRight(k, l, r):
+  match l:
+    case Avl/Leaf:
+      return Avl.insert(r, k)
+    case Avl/Node:
+      if Avl.depth(l.right) <= Avl.depth(r) + 1:
+        t = Avl.create(k, l.right, r)
+        if Avl.depth(t) <= Avl.depth(l.left) + 1:
+          return Avl.create(l.key, l.left, t)
+        else:
+          rot = Avl.rotate_right(t)
+          return Avl.rotate_left(Avl.create(l.key, l.left, rot))
+      else:
+        t = Avl.joinRight(k, l.right, r)
+        t_ = Avl.create(l.key, l.left, t)
+        if Avl.depth(t) <= Avl.depth(l.left) + 1:
+          return t_
+        else:
+          return Avl.rotate_left(t_)
+
+def Avl.joinLeft(k, l, r):
+  match r:
+    case Avl/Leaf:
+      return Avl.insert(l, k)
+    case Avl/Node:
+      if Avl.depth(r.left) <= Avl.depth(l) + 1:
+        t = Avl.create(k, l, r.left)
+        if Avl.depth(t) <= Avl.depth(r.right) + 1:
+          return Avl.create(r.key, t, r.right)
+        else:
+          rot = Avl.rotate_left(t)
+          return Avl.rotate_right(Avl.create(r.key, rot, r.right))
+      else:
+        t = Avl.joinLeft(k, r.left, l)
+        t_ = Avl.create(r.key, t, r.right)
+        if Avl.depth(t) <= Avl.depth(r.right) + 1:
+          return t_
+        else:
+          return Avl.rotate_right(t_)
+
+def Avl.join(k, l, r):
+  if Avl.depth(l) > Avl.depth(r) + 1:
+    return Avl.joinRight(k, l, r)
+  elif Avl.depth(r) > Avl.depth(l) + 1:
+    return Avl.joinLeft(k, l, r)
+  else:
+    return Avl.create(k, l, r)
+
+def Avl.split(t, k):
+  match t:
+    case Avl/Leaf:
+      return 0, Avl/Leaf, Avl/Leaf
+    case Avl/Node:
+      sign = Avl.sign(k, t)
+      if sign == +0:
+        return (1, t.left, t.right)
+      elif sign == -1:
+        (b, l, r) = Avl.split(t.left, k)
+        return (b, l, Avl.join(t.key, r, t.right))
+      else:
+        (b, l, r) = Avl.split(t.right, k)
+        return (b, Avl.join(t.key, l, t.left), r)
+
+def Avl.union(t0, t1):
+  match t0:
+    case Avl/Leaf:
+      return t1
+    case Avl/Node:
+      match t1:
+        case Avl/Leaf:
+          return t0
+        case Avl/Node:
+          (b, l, r) = Avl.split(t1, t0.key)
+          return Avl.join(t0.key, Avl.union(t0.left, l), Avl.union(t0.right, r))
+
 def main():
-  root = Avl/Leaf()
-  root = Avl.insert(root, Dual(0.0, +9, 0))
-  root = Avl.insert(root, Dual(0.0, +5, 0))
-  root = Avl.insert(root, Dual(0.0, +10, 0))
-  root = Avl.insert(root, Dual(0.0, +0, 0))
-  root = Avl.insert(root, Dual(0.0, +6, 0))
-  root = Avl.insert(root, Dual(0.0, +11, 0))
-  root = Avl.insert(root, Dual(0.0, -1, 0))
-  root = Avl.insert(root, Dual(0.0, +1, 0))
-  root = Avl.insert(root, Dual(0.0, +2, 0))
-  root = Avl.remove(root, Dual(0.0, +10, 0))
+  emus = Avl/Leaf()
+  emus = Avl.insert(emus, Dual(0.0, +9, 0))
+  emus = Avl.insert(emus, Dual(0.0, +5, 0))
+  emus = Avl.insert(emus, Dual(0.0, +10, 0))
+  emus = Avl.insert(emus, Dual(0.0, +0, 0))
+  emus = Avl.insert(emus, Dual(0.0, +6, 0))
+  emus = Avl.insert(emus, Dual(0.0, +11, 0))
+  emus = Avl.insert(emus, Dual(0.0, -1, 0))
+  emus = Avl.insert(emus, Dual(0.0, +1, 0))
+  emus = Avl.insert(emus, Dual(0.0, +2, 0))
+  emus = Avl.remove(emus, Dual(0.0, +10, 0))
+  roos = Avl/Leaf()
+  roos = Avl.insert(roos, Dual(0.0, +7, 0))
+  roos = Avl.insert(roos, Dual(0.0, +3, 0))
+  roos = Avl.insert(roos, Dual(0.0, +4, 0))
+  roos = Avl.insert(roos, Dual(0.0, +8, 0))
+  roos = Avl.insert(roos, Dual(0.0, +12))
+  roos = Avl.insert(roos, Dual(0.0, -2, 0))
+  roos = Avl.insert(roos, Dual(0.0, -4, 0))
+  roos = Avl.insert(roos, Dual(0.0, +13, 0))
+  roos = Avl.insert(roos, Dual(0.0, -3, 0))
+  emus = Avl.union(emus, roos)
   with IO:
-    * <- IO/print(Avl.repr(root))
+    * <- IO/print(Avl.repr(emus))
     return *
