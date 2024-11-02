@@ -36,4 +36,10 @@ def resize(rng, arr, limit):
     return (len, arr)
 
 def build(rng, tree, limit):
+  # split/resize input trees
+  # assign random numbers
+  # construct backfill queue
+  # construct sample tree
+  # remove samples used as backfill
+  # merge backfill with samples
   return *

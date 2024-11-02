@@ -16,6 +16,10 @@ type AvlData:
   Max { value, data }
   MinQueue { size, values }
 
+type QueueData:
+  Key { key }
+  Kv { key, data }
+
 # https://www.geeksforgeeks.org/insertion-in-an-avl-tree/
 #
 #      y                               x
@@ -142,6 +146,18 @@ def Avl.sign(key, y):
             case _:
               return +1
 
+def QueueData.map(arr):
+  match arr:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      match arr.head:
+        case QueueData/Key:
+          res = arr.head.key
+        case _:
+          res = arr.head.key
+      return List/Cons(res, QueueData.map(arr.tail))
+
 def Avl.repr_key(rtl, key, height):
   match key:
     case AvlKey/Single:
@@ -157,7 +173,7 @@ def Avl.repr_key(rtl, key, height):
       rtl = String/Cons(':', String/Cons(' ', rtl))
       rtl = String/Cons('m', String/Cons('i', String/Cons('t', rtl)))
       rtl = String/Cons(' ', String/Cons('l', String/Cons('i', rtl)))
-      rtl = Avl.repr_ints(rtl, data.values)
+      rtl = Avl.repr_ints(rtl, QueueData.map(data.values))
     case _:
       rtl = String/Cons('*', rtl)
   rtl = String/Cons(' ', String/Cons('|', String/Cons(' ', rtl)))
@@ -467,7 +483,17 @@ def Avl.merge_queue(q0, q1, size):
           case List/Nil:
             return List/Cons(q0.head, Avl.merge_queue(q0.tail, q1, size - 1))
           case List/Cons:
-            if q0.head < q1.head:
+            match q0.head:
+              case QueueData/Key:
+                k0 = q0.head.key
+              case _:
+                k0 = q0.head.key
+            match q1.head:
+              case QueueData/Key:
+                k1 = q1.head.key
+              case _:
+                k1 = q1.head.key
+            if k0 < k1:
               return List/Cons(q0.head, Avl.merge_queue(q0.tail, q1, size - 1))
             else:
               return List/Cons(q1.head, Avl.merge_queue(q0, q1.tail, size - 1))
@@ -531,14 +557,23 @@ def Avl.union(t0, t1):
 def AvlData.placeholder:
   return AvlData/Nil
 
+def QueueData/Key.map(arr):
+  match arr:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      return List/Cons(QueueData/Key(arr.head), QueueData/Key.map(arr.tail))
+
 def main():
+  q0 = AvlData/MinQueue(5, QueueData/Key.map([3, 5, 6]))
+  q1 = AvlData/MinQueue(5, QueueData/Key.map([1, 2, 4]))
   emus = Avl/Leaf()
   emus = Avl.insert(emus, AvlKey/Single(+9,  AvlData.placeholder()))
   emus = Avl.insert(emus, AvlKey/Single(+5,  AvlData.placeholder()))
   emus = Avl.insert(emus, AvlKey/Single(+10, AvlData.placeholder()))
   emus = Avl.insert(emus, AvlKey/Single(+0,  AvlData.placeholder()))
   emus = Avl.insert(emus, AvlKey/Single(+6,  AvlData.placeholder()))
-  emus = Avl.insert(emus, AvlKey/Single(+11, AvlData/MinQueue(5, [3, 5, 6])))
+  emus = Avl.insert(emus, AvlKey/Single(+11, q0))
   emus = Avl.insert(emus, AvlKey/Single(-1,  AvlData.placeholder()))
   emus = Avl.insert(emus, AvlKey/Single(+1,  AvlData.placeholder()))
   emus = Avl.insert(emus, AvlKey/Single(+2,  AvlData.placeholder()))
@@ -551,7 +586,7 @@ def main():
   roos = Avl.insert(roos, AvlKey/Single(+12, AvlData.placeholder()))
   roos = Avl.insert(roos, AvlKey/Single(-2,  AvlData.placeholder()))
   roos = Avl.insert(roos, AvlKey/Single(-4,  AvlData.placeholder()))
-  roos = Avl.insert(roos, AvlKey/Single(+11, AvlData/MinQueue(5, [1, 2, 4])))
+  roos = Avl.insert(roos, AvlKey/Single(+11, q1))
   roos = Avl.insert(roos, AvlKey/Single(-3,  AvlData.placeholder()))
   emus = Avl.union(emus, roos)
   with IO:
