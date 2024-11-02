@@ -14,6 +14,7 @@ type AvlData:
   Nil
   Inert { data }
   Max { value, data }
+  MinQueue { size, values }
 
 # https://www.geeksforgeeks.org/insertion-in-an-avl-tree/
 #
@@ -150,6 +151,13 @@ def Avl.repr_key(rtl, key, height):
   match data:
     case AvlData/Max:
       rtl = Avl.repr_int(rtl, data.value)
+    case AvlData/MinQueue:
+      rtl = Avl.repr_int(rtl, data.size)
+      # as of writing there's no builtin String/concat and this was easier
+      rtl = String/Cons(':', String/Cons(' ', rtl))
+      rtl = String/Cons('m', String/Cons('i', String/Cons('t', rtl)))
+      rtl = String/Cons(' ', String/Cons('l', String/Cons('i', rtl)))
+      rtl = Avl.repr_ints(rtl, data.values)
     case _:
       rtl = String/Cons('*', rtl)
   rtl = String/Cons(' ', String/Cons('|', String/Cons(' ', rtl)))
@@ -179,6 +187,22 @@ def Avl.repr_int(rtl, key):
     return Avl.repr_int(String/Cons((key % 10) + '0', rtl), key / 10)
   else:
     return String/Cons(key + '0', rtl)
+
+def Avl.repr_ints_(rtl, keys):
+  match keys:
+    case List/Nil:
+      return rtl
+    case List/Cons:
+      rtl = Avl.repr_ints_(rtl, keys.tail)
+      return List/Cons(' ', Avl.repr_int(rtl, keys.head))
+
+def Avl.repr_ints(rtl, keys):
+  rtl = Avl.repr_ints_(String/Cons(']', rtl), keys)
+  match rtl:
+    case String/Cons:
+      return String/Cons('[', rtl.tail)
+    case String/Nil:
+      return String/Cons('[', rtl)
 
 def Avl.repr_float_(rtl, key, n):
   lo = +10.0 ** (u24/to_f24(n))
@@ -427,6 +451,36 @@ def Avl.split(t, k):
         (b, m, l, r) = Avl.split(t.right, k)
         return (b, m, Avl.join(t.key, l, t.left), r)
 
+def Avl.merge_queue(q0, q1, size):
+  if size == 0:
+    return List/Nil
+  else:
+    match q0:
+      case List/Nil:
+        match q1:
+          case List/Nil:
+            return List/Nil
+          case List/Cons:
+            return List/Cons(q1.head, Avl.merge_queue(q0, q1.tail, size - 1))
+      case List/Cons:
+        match q1:
+          case List/Nil:
+            return List/Cons(q0.head, Avl.merge_queue(q0.tail, q1, size - 1))
+          case List/Cons:
+            if q0.head < q1.head:
+              return List/Cons(q0.head, Avl.merge_queue(q0.tail, q1, size - 1))
+            else:
+              return List/Cons(q1.head, Avl.merge_queue(q0, q1.tail, size - 1))
+
+def Avl.merge_key(template, data):
+  match template:
+    case AvlKey/Single:
+      return AvlKey/Single(template.key, data)
+    case AvlKey/Double:
+      return AvlKey/Double(template.key0, template.key1, data)
+    case AvlKey/Dual:
+      return AvlKey/Double(template.approx, template.exact, data)
+
 def Avl.merge(k0, k1):
   match k0:
     case AvlKey/Single:
@@ -446,6 +500,13 @@ def Avl.merge(k0, k1):
             return k0
           else:
             return k1
+        case _:
+          return k0
+    case AvlData/MinQueue:
+      match d1:
+        case AvlData/MinQueue:
+          data = Avl.merge_queue(d0.values, d1.values, d0.size)
+          return Avl.merge_key(k0, AvlData/MinQueue(d0.size, data))
         case _:
           return k0
     case _:
@@ -477,7 +538,7 @@ def main():
   emus = Avl.insert(emus, AvlKey/Single(+10, AvlData.placeholder()))
   emus = Avl.insert(emus, AvlKey/Single(+0,  AvlData.placeholder()))
   emus = Avl.insert(emus, AvlKey/Single(+6,  AvlData.placeholder()))
-  emus = Avl.insert(emus, AvlKey/Single(+11, AvlData.placeholder()))
+  emus = Avl.insert(emus, AvlKey/Single(+11, AvlData/MinQueue(5, [3, 5, 6])))
   emus = Avl.insert(emus, AvlKey/Single(-1,  AvlData.placeholder()))
   emus = Avl.insert(emus, AvlKey/Single(+1,  AvlData.placeholder()))
   emus = Avl.insert(emus, AvlKey/Single(+2,  AvlData.placeholder()))
@@ -490,7 +551,7 @@ def main():
   roos = Avl.insert(roos, AvlKey/Single(+12, AvlData.placeholder()))
   roos = Avl.insert(roos, AvlKey/Single(-2,  AvlData.placeholder()))
   roos = Avl.insert(roos, AvlKey/Single(-4,  AvlData.placeholder()))
-  roos = Avl.insert(roos, AvlKey/Single(+11, AvlData/Max(0, 0)))
+  roos = Avl.insert(roos, AvlKey/Single(+11, AvlData/MinQueue(5, [1, 2, 4])))
   roos = Avl.insert(roos, AvlKey/Single(-3,  AvlData.placeholder()))
   emus = Avl.union(emus, roos)
   with IO:
