@@ -334,7 +334,7 @@ def graph_offset(data, n):
             off = data.head.head
           return (List/Cons(off, res), rem)
 
-# excludes 1-loops
+# choice without self-reference
 def graph(rng, n, k):
   samples = choice(rng, n - 1, k, n)
   (res, rem) = graph_offset(samples, 0)

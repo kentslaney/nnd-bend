@@ -1,4 +1,5 @@
 from ./util import (max,)
+from ./map import (DirectAccess,)
 
 type Avl:
   Node { key, height, ~left, ~right }
@@ -18,6 +19,7 @@ type AvlData:
 
 type QueueData:
   Key { key }
+  Dual { key, uniq }
   Kv { key, data }
 
 # https://www.geeksforgeeks.org/insertion-in-an-avl-tree/
@@ -158,6 +160,20 @@ def QueueData.map(arr):
           res = arr.head.key
       return List/Cons(res, QueueData.map(arr.tail))
 
+def QueueData.values(arr):
+  match arr:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      match arr.head:
+        case QueueData/Kv:
+          res = arr.head.data
+        case QueueData/Dual:
+          res = arr.head.uniq
+        case _:
+          res = arr.head.key
+      return List/Cons(res, QueueData.values(arr.tail))
+
 def Avl.repr_key(rtl, key, height):
   match key:
     case AvlKey/Single:
@@ -173,7 +189,9 @@ def Avl.repr_key(rtl, key, height):
       rtl = String/Cons(':', String/Cons(' ', rtl))
       rtl = String/Cons('m', String/Cons('i', String/Cons('t', rtl)))
       rtl = String/Cons(' ', String/Cons('l', String/Cons('i', rtl)))
-      rtl = Avl.repr_ints(rtl, QueueData.map(data.values))
+      rtl = Avl.repr_floats(rtl, QueueData.map(data.values))
+      rtl = String/Cons(' ', rtl)
+      rtl = Avl.repr_ints(rtl, QueueData.values(data.values))
     case _:
       rtl = String/Cons('*', rtl)
   rtl = String/Cons(' ', String/Cons('|', String/Cons(' ', rtl)))
@@ -196,6 +214,24 @@ def Avl.repr_key(rtl, key, height):
 def Avl.repr(x):
   return Avl.walk(x, String/Nil, +0, String/Nil)
 
+def Avl.list_repr(x):
+  match x:
+    case List/Nil:
+      return String/Nil
+    case List/Cons:
+      rem = Avl.list_repr(x.tail)
+      return Avl.walk(x.head, rem, +0, String/Nil)
+
+def Avl.map_repr(x):
+  return Avl.map_repr_(x, String/Nil)
+
+def Avl.map_repr_(x, rtl):
+  match x:
+    case DirectAccess/Leaf:
+      return Avl.walk(x.value, rtl, +0, String/Nil)
+    case DirectAccess/Node:
+      return Avl.map_repr_(x.left, Avl.map_repr_(x.right, rtl))
+
 def Avl.repr_int(rtl, key):
   if key < +0:
     return String/Cons('-', Avl.repr_int(rtl, -1 * key))
@@ -216,7 +252,29 @@ def Avl.repr_ints(rtl, keys):
   rtl = Avl.repr_ints_(String/Cons(']', rtl), keys)
   match rtl:
     case String/Cons:
-      return String/Cons('[', rtl.tail)
+      if rtl.head == ' ':
+        return String/Cons('[', rtl.tail)
+      else:
+        return String/Cons('[', rtl)
+    case String/Nil:
+      return String/Cons('[', rtl)
+
+def Avl.repr_floats_(rtl, keys):
+  match keys:
+    case List/Nil:
+      return rtl
+    case List/Cons:
+      rtl = Avl.repr_floats_(rtl, keys.tail)
+      return List/Cons(' ', Avl.repr_float(rtl, keys.head))
+
+def Avl.repr_floats(rtl, keys):
+  rtl = Avl.repr_floats_(String/Cons(']', rtl), keys)
+  match rtl:
+    case String/Cons:
+      if rtl.head == ' ':
+        return String/Cons('[', rtl.tail)
+      else:
+        return String/Cons('[', rtl)
     case String/Nil:
       return String/Cons('[', rtl)
 
@@ -485,14 +543,24 @@ def Avl.merge_queue(q0, q1, size):
           case List/Cons:
             match q0.head:
               case QueueData/Key:
-                k0 = q0.head.key
+                k0, u0 = q0.head.key, 0
+              case QueueData/Dual:
+                k0, u0 = q0.head.key, q0.head.uniq
               case _:
-                k0 = q0.head.key
+                k0, u0 = q0.head.key, 0
             match q1.head:
               case QueueData/Key:
-                k1 = q1.head.key
+                k1, q0, q1 = q1.head.key, q0, q1
+              case QueueData/Dual:
+                if u0 == q1.head.uniq:
+                  if k0 < q1.head.key:
+                    k1, q0, q1 = q1.head.key, q0, q1.tail
+                  else:
+                    k1, q0, q1 = q1.head.key, q0.tail, q1
+                else:
+                  k1, q0, q1 = q1.head.key, q0, q1
               case _:
-                k1 = q1.head.key
+                k1, q0, q1 = q1.head.key, q0, q1
             if k0 < k1:
               return List/Cons(q0.head, Avl.merge_queue(q0.tail, q1, size - 1))
             else:
@@ -505,7 +573,7 @@ def Avl.merge_key(template, data):
     case AvlKey/Double:
       return AvlKey/Double(template.key0, template.key1, data)
     case AvlKey/Dual:
-      return AvlKey/Double(template.approx, template.exact, data)
+      return AvlKey/Dual(template.approx, template.exact, data)
 
 def Avl.merge(k0, k1):
   match k0:
@@ -563,32 +631,3 @@ def QueueData/Key.map(arr):
       return List/Nil
     case List/Cons:
       return List/Cons(QueueData/Key(arr.head), QueueData/Key.map(arr.tail))
-
-def main():
-  q0 = AvlData/MinQueue(5, QueueData/Key.map([3, 5, 6]))
-  q1 = AvlData/MinQueue(5, QueueData/Key.map([1, 2, 4]))
-  emus = Avl/Leaf()
-  emus = Avl.insert(emus, AvlKey/Single(+9,  AvlData.placeholder()))
-  emus = Avl.insert(emus, AvlKey/Single(+5,  AvlData.placeholder()))
-  emus = Avl.insert(emus, AvlKey/Single(+10, AvlData.placeholder()))
-  emus = Avl.insert(emus, AvlKey/Single(+0,  AvlData.placeholder()))
-  emus = Avl.insert(emus, AvlKey/Single(+6,  AvlData.placeholder()))
-  emus = Avl.insert(emus, AvlKey/Single(+11, q0))
-  emus = Avl.insert(emus, AvlKey/Single(-1,  AvlData.placeholder()))
-  emus = Avl.insert(emus, AvlKey/Single(+1,  AvlData.placeholder()))
-  emus = Avl.insert(emus, AvlKey/Single(+2,  AvlData.placeholder()))
-  emus = Avl.remove(emus, AvlKey/Single(+10, AvlData.placeholder()))
-  roos = Avl/Leaf()
-  roos = Avl.insert(roos, AvlKey/Single(+7,  AvlData.placeholder()))
-  roos = Avl.insert(roos, AvlKey/Single(+3,  AvlData.placeholder()))
-  roos = Avl.insert(roos, AvlKey/Single(+4,  AvlData.placeholder()))
-  roos = Avl.insert(roos, AvlKey/Single(+8,  AvlData.placeholder()))
-  roos = Avl.insert(roos, AvlKey/Single(+12, AvlData.placeholder()))
-  roos = Avl.insert(roos, AvlKey/Single(-2,  AvlData.placeholder()))
-  roos = Avl.insert(roos, AvlKey/Single(-4,  AvlData.placeholder()))
-  roos = Avl.insert(roos, AvlKey/Single(+11, q1))
-  roos = Avl.insert(roos, AvlKey/Single(-3,  AvlData.placeholder()))
-  emus = Avl.union(emus, roos)
-  with IO:
-    * <- IO/print(Avl.repr(emus))
-    return *
