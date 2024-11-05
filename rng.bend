@@ -312,6 +312,34 @@ def choice_(data):
 def choice(rng, n, k, samples):
   return choice_(choice_init(split(rng, k), n, samples))
 
+def graph_offset(data, n):
+  match data:
+    case List/Nil:
+      return (List/Nil, List/Nil)
+    case List/Cons:
+      match data.head:
+        case List/Nil:
+          (res, rem) = graph_offset(data.tail, n + 1)
+          match res:
+            case List/Nil:
+              return (List/Nil, rem)
+            case List/Cons:
+              return (List/Nil, List/Cons(res, rem))
+        case List/Cons:
+          rem = List/Cons(data.head.tail, data.tail)
+          (res, rem) = graph_offset(rem, n)
+          if data.head.head >= n:
+            off = data.head.head + 1
+          else:
+            off = data.head.head
+          return (List/Cons(off, res), rem)
+
+# excludes 1-loops
+def graph(rng, n, k):
+  samples = choice(rng, n - 1, k, n)
+  (res, rem) = graph_offset(samples, 0)
+  return List/Cons(res, rem)
+
 def test_shift():
   (a0, a1) = rotate_left((0xDEAD, 0xBEEF), 4)
   (b0, b1) = rotate_left((0xDEAD, 0xBEEF), 24)

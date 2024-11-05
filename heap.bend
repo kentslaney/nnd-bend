@@ -1,5 +1,5 @@
 from ./map import *
-from ./rng import (choice,)
+from ./rng import (graph,)
 from ./util import (max_order, range, zip)
 
 object Candidate { distance, index, flag }
@@ -106,28 +106,6 @@ def Heaps.create(points, k):
   res = Heaps.create_(points, k)
   return Heaps(res, points, k, euclidean)
 
-def Heaps.randomize_offset(data, n):
-  match data:
-    case List/Nil:
-      return (List/Nil, List/Nil)
-    case List/Cons:
-      match data.head:
-        case List/Nil:
-          (res, rem) = Heaps.randomize_offset(data.tail, n + 1)
-          match res:
-            case List/Nil:
-              return (List/Nil, rem)
-            case List/Cons:
-              return (List/Nil, List/Cons(res, rem))
-        case List/Cons:
-          rem = List/Cons(data.head.tail, data.tail)
-          (res, rem) = Heaps.randomize_offset(rem, n)
-          if data.head.head >= n:
-            off = data.head.head + 1
-          else:
-            off = data.head.head
-          return (List/Cons(off, res), rem)
-
 def Heap.candidate(data, i, j, dist):
   d = dist(DirectAccess.get(data, i), DirectAccess.get(data, j))
   return Candidate(d, j, 1)
@@ -155,9 +133,7 @@ def Heaps.randomize_(heaps, candidates, data, n, dist):
 
 def Heaps.randomize(rng, data, k):
   (points, data) = DirectAccess.length(data)
-  samples = choice(rng, points - 1, k, points)
-  (res, rem) = Heaps.randomize_offset(samples, 0)
-  samples = List/Cons(res, rem)
+  samples = graph(rng, points, k)
   res = Heaps.create(points, k)
   open Heaps: res
   out = Heaps.randomize_(res.data, samples, data, 0, res.dist)

@@ -61,18 +61,6 @@ def split_after(arr, n):
 hvm inf -> (f24 -> f24):
   ($([*7f8000] ret) ret)
 
-def median(arr):
-  (len, arr) = List/length(arr)
-  return select(arr, len / 2)
-
-def select_fifth(arr):
-  match arr:
-    case List/Cons:
-      (out, nxt) = select5(arr, 2)
-      return List/Cons(out, select_fifth(nxt))
-    case List/Nil:
-      return List/Nil
-
 def max_order_(bin, pos):
   if (bin >> pos) | (pos == 0):
     return pos
@@ -147,6 +135,32 @@ def repeat(x, n):
     return List/Nil
   else:
     return List/Cons(x, repeat(x, n - 1))
+
+def split_out(subkeys):
+  match subkeys:
+    case List/Nil:
+      return (*, List/Nil)
+    case List/Cons:
+      return (subkeys.head, subkeys.tail)
+
+def unwrap_singleton(arr):
+  match arr:
+    case List/Nil:
+      return *
+    case List/Cons:
+      return arr.head
+
+def median(arr):
+  (len, arr) = List/length(arr)
+  return select(arr, len / 2)
+
+def select_fifth(arr):
+  match arr:
+    case List/Cons:
+      (out, nxt) = select5(arr, 2)
+      return List/Cons(out, select_fifth(nxt))
+    case List/Nil:
+      return List/Nil
 
 # arr is a list of unique f24s
 def select(arr, k):

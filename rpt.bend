@@ -1,20 +1,9 @@
 from ./rng import (split, split_2, randint, bernoulli, partition)
-from ./util import (zip, sided, max, max_order, list_index, range, postfix)
+from ./util import (
+  zip, sided, max, max_order, list_index, range, postfix, split_out,
+  unwrap_singleton
+)
 from ./map import *
-
-def split_out(subkeys):
-  match subkeys:
-    case List/Nil:
-      return (*, List/Nil)
-    case List/Cons:
-      return (subkeys.head, subkeys.tail)
-
-def unwrap_singleton(arr):
-  match arr:
-    case List/Nil:
-      return *
-    case List/Cons:
-      return arr.head
 
 def sample(rng, start, end):
   rng = split(rng, 3)
