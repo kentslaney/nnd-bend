@@ -495,7 +495,7 @@ def Avl.joinLeft(k, l, r):
           rot = Avl.rotate_left(t)
           return Avl.rotate_right(Avl.create(r.key, rot, r.right))
       else:
-        t = Avl.joinLeft(k, r.left, l)
+        t = Avl.joinLeft(k, l, r.left)
         t_ = Avl.create(r.key, t, r.right)
         if Avl.depth(t) <= Avl.depth(r.right) + 1:
           return t_
@@ -523,7 +523,7 @@ def Avl.split(t, k):
         return (b, m, l, Avl.join(t.key, r, t.right))
       else:
         (b, m, l, r) = Avl.split(t.right, k)
-        return (b, m, Avl.join(t.key, l, t.left), r)
+        return (b, m, Avl.join(t.key, t.left, l), r)
 
 def Avl.merge_queue(q0, q1, size):
   if size == 0:
