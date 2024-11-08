@@ -280,6 +280,22 @@ def apply_(k, data, candidates):
     case DirectAccess/Leaf:
       return apply_cross(k, data, candidates.value, [])
 
+# TODO: bipartite candidates; flag updates
 def apply(k, data, tree, candidates):
-  # TODO: merge tree (DA of AVLs w/ flag) and apply_ result (AVL of MinQueues)
-  return apply_(k, data, candidates)
+  return apply_merge(k, tree, apply_(k, data, candidates), 0)
+
+def apply_merge(k, tree, updates, index):
+  # tree: DA of AVLs holding AvlKey/Dual
+  # updates: AVL of MinQueues holding QueueData/Dual
+  # index: node index that the updates are for
+  match tree:
+    case DirectAccess/Node:
+      pivot = AvlKey/Single(tree.index, AvlData/Nil)
+      l, r = Avl.split_left_of(updates, pivot)
+      l = apply_merge(k, tree.left, l, tree.index - 1)
+      r = apply_merge(k, tree.right, r, tree.index)
+      return DirectAccess/Node(tree.index, l, r)
+    case DirectAccess/Leaf:
+      (size, updates) = build_unwrap(updates, index)
+      ins = Avl.from_sorted(AvlKey/Dual.from_q(updates, AvlData/Inert(1)))
+      return DirectAccess/Leaf(Avl.prune(Avl.union(tree.value, ins), 4))

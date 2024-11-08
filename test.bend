@@ -34,5 +34,5 @@ def main:
   lo, hi = build(subkey1, tree, 4)
   out = apply(4, data, tree, hi)
   with IO:
-    * <- IO/print(Avl.repr(out))
-    return DirectAccess.to_list(hi)#, DirectAccess.get(tree, 0)
+    * <- IO/print(Avl.map_repr(out))
+    return *

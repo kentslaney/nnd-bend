@@ -725,3 +725,80 @@ def QueueData.limited_sort(size, data):
         else:
           r = QueueData.limited_sort(size - pre - 1, r)
           return List/concat(l, List/Cons(data.head, r))
+
+def Avl.from_sorted_(arr, len):
+  if len == 0:
+    return Avl/Leaf(), arr
+  elif len == 1:
+    match arr:
+      case List/Nil:
+        return (Avl/Leaf(), List/Nil)
+      case List/Cons:
+        return (Avl/Leaf.create(arr.head), arr.tail)
+  else:
+    l, arr = Avl.from_sorted_(arr, (len - 1) / 2)
+    match arr:
+      case List/Cons:
+        el, arr = arr.head, arr.tail
+      case List/Nil:
+        el, arr = *, arr
+    r, arr = Avl.from_sorted_(arr, len / 2)
+    return Avl.create(el, l, r), arr
+
+def Avl.from_sorted(arr):
+  len, arr = List/length(arr)
+  out, * = Avl.from_sorted_(arr, len)
+  return out
+
+def AvlKey/Single.map(arr):
+  match arr:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      res = AvlKey/Single(arr.head, AvlData/Nil)
+      return List/Cons(res, AvlKey/Single.map(arr.tail))
+
+def AvlKey/Dual.from_q(arr, data):
+  match arr:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      match arr.head:
+        case QueueData/Dual:
+          res = AvlKey/Dual(arr.head.key, arr.head.uniq, data)
+          return List/Cons(res, AvlKey/Dual.from_q(arr.tail, data))
+        case _:
+          return *
+
+type OptionalKey:
+  Some { value }
+  None
+
+def Avl.count(tree):
+  match tree:
+    case Avl/Leaf:
+      return 0
+    case Avl/Node:
+      return 1 + Avl.count(tree.left) + Avl.count(tree.right)
+
+def Avl.nth(tree, n):
+  match tree:
+    case Avl/Leaf:
+      return OptionalKey/None()
+    case Avl/Node:
+      left = Avl.count(tree.left)
+      if left == n:
+        return OptionalKey/Some(tree.key)
+      elif left > n:
+        return Avl.nth(tree.left, n)
+      else:
+        return Avl.nth(tree.right, n - left - 1)
+
+def Avl.prune(tree, limit):
+  oob = Avl.nth(tree, limit)
+  match oob:
+    case OptionalKey/None:
+      return tree
+    case OptionalKey/Some:
+      l, * = Avl.split_left_of(tree, oob.value)
+      return l
