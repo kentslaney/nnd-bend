@@ -32,4 +32,7 @@ def main:
   tree = map_mat_avl(graph(subkey0, 8, 4), data, 0)
   tree = DirectAccess.create(tree)
   lo, hi = build(subkey1, tree, 4)
-  return DirectAccess.to_list(lo), DirectAccess.to_list(hi)
+  out = apply(4, data, tree, hi)
+  with IO:
+    * <- IO/print(Avl.repr(out))
+    return DirectAccess.to_list(hi)#, DirectAccess.get(tree, 0)

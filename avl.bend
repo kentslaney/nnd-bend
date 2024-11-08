@@ -690,3 +690,38 @@ def QueueData/Key.map(arr):
       return List/Nil
     case List/Cons:
       return List/Cons(QueueData/Key(arr.head), QueueData/Key.map(arr.tail))
+
+def QueueData.unwrap(element):
+  match element:
+    case QueueData/Key:
+      return element.key
+    case _:
+      return element.key
+
+def QueueData.limited_sort_(data, pivot):
+  match data:
+    case List/Nil:
+      return (List/Nil, List/Nil)
+    case List/Cons:
+      rem0, rem1 = QueueData.limited_sort_(data.tail, pivot)
+      if QueueData.unwrap(data.head) < pivot:
+        return List/Cons(data.head, rem0), rem1
+      else:
+        return rem0, List/Cons(data.head, rem1)
+
+def QueueData.limited_sort(size, data):
+  match data:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      l, r = QueueData.limited_sort_(data.tail, QueueData.unwrap(data.head))
+      (pre, l) = List/length(l)
+      if pre >= size:
+        return QueueData.limited_sort(size, l)
+      else:
+        l = QueueData.limited_sort(pre, l)
+        if pre == size - 1:
+          return List/concat(l, [data.head])
+        else:
+          r = QueueData.limited_sort(size - pre - 1, r)
+          return List/concat(l, List/Cons(data.head, r))

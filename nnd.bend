@@ -243,3 +243,43 @@ def build(rng, tree, limit):
   rng1 = DirectAccess.create(split(subkey1, points))
   rev0, rev1 = build_(rng0, d, tree, limit, 0)
   return build_backfill(rng1, tree, rev0, rev1, 0)
+
+def apply_dist(arr):
+  match arr:
+    case List/Nil:
+      return 0.0
+    case List/Cons:
+      (a, b) = arr.head
+      return apply_dist(arr.tail) + (a - b) ** 2.0
+
+def apply_conv(data, self, others):
+  match others:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      out = apply_dist(zip(self, DirectAccess.get(data, others.head)))
+      out = QueueData/Dual(out, others.head)
+      return List/Cons(out, apply_conv(data, self, others.tail))
+
+def apply_cross(k, data, pre, post):
+  match pre:
+    case List/Nil:
+      return Avl/Leaf()
+    case List/Cons:
+      rem = apply_cross(k, data, pre.tail, List/Cons(pre.head, post))
+      self = DirectAccess.get(data, pre.head)
+      self = apply_conv(data, self, List/concat(pre.tail, post))
+      self = AvlData/MinQueue(k, QueueData.limited_sort(k, self))
+      return Avl.insert(rem, AvlKey/Single(pre.head, self))
+
+def apply_(k, data, candidates):
+  match candidates:
+    case DirectAccess/Node:
+      l, r = apply_(k, data, candidates.left), apply_(k, data, candidates.right)
+      return Avl.union(l, r)
+    case DirectAccess/Leaf:
+      return apply_cross(k, data, candidates.value, [])
+
+def apply(k, data, tree, candidates):
+  # TODO: merge tree (DA of AVLs w/ flag) and apply_ result (AVL of MinQueues)
+  return apply_(k, data, candidates)
