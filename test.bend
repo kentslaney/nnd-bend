@@ -27,10 +27,9 @@ def map_mat_avl(arr, data, n):
 def main:
   rng = key(42)
   rng, subkey = split_2(rng)
+  subkey0, subkey1 = split_2(subkey)
   data = DirectAccess.create(normal(rng, [8, 3]))
-  tree = map_mat_avl(graph(key(42), 8, 4), data, 0)
+  tree = map_mat_avl(graph(subkey0, 8, 4), data, 0)
   tree = DirectAccess.create(tree)
-  lo, hi = build(subkey, tree, 4)
-  with IO:
-    * <- IO/print(Avl.list_repr([lo, hi]))
-    return *
+  lo, hi = build(subkey1, tree, 4)
+  return DirectAccess.to_list(lo), DirectAccess.to_list(hi)

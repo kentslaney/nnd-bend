@@ -39,3 +39,12 @@ def DirectAccess.length(self):
         return res, self
     case DirectAccess/Leaf:
       return 1, self
+
+def DirectAccess.to_list(self):
+  match self:
+    case DirectAccess/Leaf:
+      return [self.value]
+    case DirectAccess/Node:
+      l = DirectAccess.to_list(self.left)
+      r = DirectAccess.to_list(self.right)
+      return List/concat(l, r)

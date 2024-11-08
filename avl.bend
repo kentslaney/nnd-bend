@@ -525,6 +525,65 @@ def Avl.split(t, k):
         (b, m, l, r) = Avl.split(t.right, k)
         return (b, m, Avl.join(t.key, t.left, l), r)
 
+def Avl.split_left_of(t, k):
+  match t:
+    case Avl/Leaf:
+      return (Avl/Leaf, Avl/Leaf)
+    case Avl/Node:
+      sign = Avl.sign(k, t)
+      if sign == +1:
+        (l, r) = Avl.split_left_of(t.right, k)
+        return (Avl.join(t.key, t.left, l), r)
+      else:
+        (l, r) = Avl.split_left_of(t.left, k)
+        return (l, Avl.join(t.key, r, t.right))
+
+def Avl.get(t, k):
+  match t:
+    case Avl/Leaf:
+      return AvlData/Nil
+    case Avl/Node:
+      sign = Avl.sign(k, t)
+      if sign == +0:
+        match t.key:
+          case AvlKey/Single:
+            return t.key.data
+          case _:
+            return t.key.data
+      elif sign == -1:
+        return Avl.get(t.left, k)
+      else:
+        return Avl.get(t.right, k)
+
+def Avl.cas(t, k, v):
+  match t:
+    case Avl/Leaf:
+      return (Avl/Leaf, AvlData/Nil)
+    case Avl/Node:
+      sign = Avl.sign(k, t)
+      if sign == +0:
+        match t.key:
+          case AvlKey/Single:
+            d = t.key.data
+          case _:
+            d = t.key.data
+        match d:
+          case AvlData/Inert:
+            d = d.data
+          case _:
+            d = *
+        if d < v:
+          return t, AvlData/Inert(v)
+        else:
+          v = Avl.merge_key(t.key, AvlData/Inert(v))
+          return Avl.create(v, t.left, t.right), AvlData/Inert(d)
+      elif sign == -1:
+        rem, res = Avl.cas(t.left, k, v)
+        return Avl.create(t.key, rem, t.right), res
+      else:
+        rem, res = Avl.cas(t.right, k, v)
+        return Avl.create(t.key, t.left, rem), res
+
 def Avl.merge_queue(q0, q1, size):
   if size == 0:
     return List/Nil
