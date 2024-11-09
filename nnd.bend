@@ -280,10 +280,6 @@ def apply_(k, data, candidates):
     case DirectAccess/Leaf:
       return apply_cross(k, data, candidates.value, [])
 
-# TODO: bipartite candidates; flag updates
-def apply(k, data, tree, candidates):
-  return apply_merge(k, tree, apply_(k, data, candidates), 0)
-
 def apply_merge(k, tree, updates, index):
   # tree: DA of AVLs holding AvlKey/Dual
   # updates: AVL of MinQueues holding QueueData/Dual
@@ -299,3 +295,51 @@ def apply_merge(k, tree, updates, index):
       (size, updates) = build_unwrap(updates, index)
       ins = Avl.from_sorted(AvlKey/Dual.from_q(updates, AvlData/Inert(1)))
       return DirectAccess/Leaf(Avl.prune(Avl.union(tree.value, ins), 4))
+
+def apply(k, data, tree, candidates):
+  return apply_merge(k, tree, apply_(k, data, candidates), 0)
+
+def bipartite_conv(data, self, others, except):
+  match others:
+    case List/Nil:
+      return List/Nil
+    case List/Cons:
+      rem = bipartite_conv(data, self, others.tail, except)
+      if others.head == except:
+        return rem
+      else:
+        out = apply_dist(zip(self, DirectAccess.get(data, others.head)))
+        return List/Cons(QueueData/Dual(out, others.head), rem)
+
+def bipartite_cross(k, data, set0, set1):
+  match set0:
+    case List/Nil:
+      return Avl/Leaf()
+    case List/Cons:
+      rem = bipartite_cross(k, data, set0.tail, set1)
+      self = DirectAccess.get(data, set0.head)
+      self = bipartite_conv(data, self, set1, set0.head)
+      self = AvlData/MinQueue(k, QueueData.limited_sort(k, self))
+      return Avl.insert(rem, AvlKey/Single(set0.head, self))
+
+def bipartite_(k, data, set0, set1):
+  match set0:
+    case DirectAccess/Node:
+      match set1:
+        case DirectAccess/Leaf:
+          return Avl/Leaf()
+        case DirectAccess/Node:
+          l = bipartite_(k, data, set0.left, set1.left)
+          r = bipartite_(k, data, set0.right, set1.right)
+          return Avl.union(l, r)
+    case DirectAccess/Leaf:
+      match set1:
+        case DirectAccess/Node:
+          return Avl/Leaf()
+        case DirectAccess/Leaf:
+          return bipartite_cross(k, data, set0.value, set1.value)
+
+def bipartite(k, data, tree, set0, set1):
+  return apply_merge(k, tree, bipartite_(k, data, set0, set1), 0)
+
+# TODO: flag updates

@@ -33,6 +33,7 @@ def main:
   tree = DirectAccess.create(tree)
   lo, hi = build(subkey1, tree, 4)
   out = apply(4, data, tree, hi)
+  out = bipartite(4, data, out, lo, hi)
   with IO:
     * <- IO/print(Avl.map_repr(out))
-    return *
+    return DirectAccess.to_list(lo), DirectAccess.to_list(hi)
