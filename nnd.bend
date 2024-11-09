@@ -346,16 +346,18 @@ def bipartite(k, data, tree, set0, set1):
 def reset_flag_(tree):
   match tree:
     case Avl/Node:
-      l, r = reset_flag_(tree.left), reset_flag_(tree.right)
+      (l, t0), (r, t1) = reset_flag_(tree.left), reset_flag_(tree.right)
+      total = t0 + t1 + AvlData/Inert.unwrap(tree.key, 0)
       self = Avl.merge_key(tree.key, AvlData/Inert(0))
-      return Avl/Node(self, tree.height, l, r)
+      return Avl/Node(self, tree.height, l, r), total
     case Avl/Leaf:
-      return Avl/Leaf()
+      return Avl/Leaf(), 0
 
 def reset_flag(tree):
   match tree:
     case DirectAccess/Node:
-      l, r = reset_flag(tree.left), reset_flag(tree.right)
-      return DirectAccess/Node(tree.index, l, r)
+      (l, t0), (r, t1) = reset_flag(tree.left), reset_flag(tree.right)
+      return DirectAccess/Node(tree.index, l, r), t0 + t1
     case DirectAccess/Leaf:
-      return DirectAccess/Leaf(reset_flag_(tree.value))
+      self, total = reset_flag_(tree.value)
+      return DirectAccess/Leaf(self), total

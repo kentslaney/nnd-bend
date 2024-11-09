@@ -32,10 +32,12 @@ def main:
   tree = map_mat_avl(graph(subkey0, 8, 4), data, 0)
   tree = DirectAccess.create(tree)
   lo, hi = build(subkey1, tree, 4)
-  tree = reset_flag(tree)
+  tree, count = reset_flag(tree)
   out = apply(4, data, tree, hi)
   out = bipartite(4, data, out, lo, hi)
   out = bipartite(4, data, out, hi, lo)
   with IO:
+    * <- IO/print("updated: ")
+    * <- IO/print(Avl.repr_int("\n", count))
     * <- IO/print(Avl.map_repr(out))
     return DirectAccess.to_list(lo), DirectAccess.to_list(hi)

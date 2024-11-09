@@ -809,3 +809,15 @@ def Avl.prune(tree, limit):
     case OptionalKey/Some:
       l, * = Avl.split_left_of(tree, oob.value)
       return l
+
+def AvlData/Inert.unwrap(key, default):
+  match key:
+    case AvlKey/Single:
+      data = key.data
+    case _:
+      data = key.data
+  match data:
+    case AvlData/Inert:
+      return data.data
+    case _:
+      return default
