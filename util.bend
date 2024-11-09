@@ -4,6 +4,12 @@ def max(x, y):
   else:
     return y
 
+def min(x, y):
+  if x < y:
+    return x
+  else:
+    return y
+
 def zip(i0, i1):
   match i0:
     case List/Cons:
@@ -149,6 +155,14 @@ def unwrap_singleton(arr):
       return *
     case List/Cons:
       return arr.head
+
+def l2sq(arr):
+  match arr:
+    case List/Nil:
+      return 0.0
+    case List/Cons:
+      (a, b) = arr.head
+      return l2sq(arr.tail) + (a - b) ** 2.0
 
 def median(arr):
   (len, arr) = List/length(arr)

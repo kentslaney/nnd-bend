@@ -1,7 +1,7 @@
 from ./avl import *
 from ./map import *
 from ./rng import (uniform, uniform_, split, split_2)
-from ./util import (select, split_out, unwrap_singleton, zip)
+from ./util import (select, split_out, unwrap_singleton, zip, l2sq)
 
 def split_dual_by_flag(tree):
   match tree:
@@ -245,12 +245,7 @@ def build(rng, tree, limit):
   return build_backfill(rng1, tree, rev0, rev1, 0)
 
 def apply_dist(arr):
-  match arr:
-    case List/Nil:
-      return 0.0
-    case List/Cons:
-      (a, b) = arr.head
-      return apply_dist(arr.tail) + (a - b) ** 2.0
+  return l2sq(arr)
 
 def apply_conv(data, self, others):
   match others:
