@@ -293,6 +293,7 @@ def apply_merge(k, tree, updates, index):
       return DirectAccess/Node(tree.index, l, r)
     case DirectAccess/Leaf:
       (size, updates) = build_unwrap(updates, index)
+      # set flag
       ins = Avl.from_sorted(AvlKey/Dual.from_q(updates, AvlData/Inert(1)))
       return DirectAccess/Leaf(Avl.prune(Avl.union(tree.value, ins), 4))
 
@@ -342,4 +343,19 @@ def bipartite_(k, data, set0, set1):
 def bipartite(k, data, tree, set0, set1):
   return apply_merge(k, tree, bipartite_(k, data, set0, set1), 0)
 
-# TODO: flag updates
+def reset_flag_(tree):
+  match tree:
+    case Avl/Node:
+      l, r = reset_flag_(tree.left), reset_flag_(tree.right)
+      self = Avl.merge_key(tree.key, AvlData/Inert(0))
+      return Avl/Node(self, tree.height, l, r)
+    case Avl/Leaf:
+      return Avl/Leaf()
+
+def reset_flag(tree):
+  match tree:
+    case DirectAccess/Node:
+      l, r = reset_flag(tree.left), reset_flag(tree.right)
+      return DirectAccess/Node(tree.index, l, r)
+    case DirectAccess/Leaf:
+      return DirectAccess/Leaf(reset_flag_(tree.value))

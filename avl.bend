@@ -670,7 +670,7 @@ def Avl.merge(k0, k1):
         case _:
           return k0
     case _:
-      return k1
+      return k0
 
 def Avl.union(t0, t1):
   match t0:
