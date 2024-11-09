@@ -189,10 +189,11 @@ def parse_header(path):
     header <- read_header(path, start, end)
     header = List/filter(header, lambda x: x != ' ')
     header = units(strip_tail(match_prefix(header, "{"), "\n},"))
-    descr = parse_descr(get_unit(header, "descr"))
-    fortran_order = String/equals(get_unit(header, "fortran_order"), "True")
+    #descr = parse_descr(get_unit(header, "descr"))
+    #fortran_order = String/equals(get_unit(header, "fortran_order"), "True")
     shape = to_nums(String/split(get_unit(header, "shape"), ','))
-    return wrap((end, descr, fortran_order, shape))
+    #return wrap((end, descr, fortran_order, shape))
+    return wrap((end, shape))
 
 def parse_big_f8(bytes):
   match bytes:
@@ -277,9 +278,10 @@ def read_body(path, start, n):
           case Result/Ok:
             return wrap(reading)
 
-def parse_body(path):
+def load_npy(path):
   with IO:
-    (end, descr, fortran_order, shape) <- parse_header(path)
+    #(end, descr, fortran_order, shape) <- parse_header(path)
+    (end, shape) <- parse_header(path)
     body <- read_body(path, end, shape_size(shape) / 1024 + 1)
     return wrap(reshape(body, shape))
 
