@@ -24,11 +24,11 @@ type QueueData:
 
 # https://www.geeksforgeeks.org/insertion-in-an-avl-tree/
 #
-#      y                               x
-#     / \     Right Rotation          /  \
-#    x   T3   - - - - - - - >        T1   y
-#   / \       < - - - - - - -            / \
-#  T1  T2     Left Rotation            T2  T3
+#      y                         x
+#     / \    Right Rotation     / \
+#    x   3   -------------->   1   y
+#   / \      <--------------      / \
+#  1   2      Left Rotation      2   3
 
 def abs(x):
   if x < +0:
