@@ -5,10 +5,12 @@ help:
 	@echo "usage: make {tiny, tiny-cu, small, small-cu, digits, digits-cu}"
 
 tiny: tiny-input
+	rm out.npy
 	bend run main.bend 4
 	make show
 
 tiny-cu: tiny-input
+	rm out.npy
 	bend run-cu main.bend 4
 	make show
 
@@ -17,10 +19,12 @@ tiny-input: .venv
 		np.save('in.npy', np.random.normal(size=(8, 3)))"
 
 small: small-input
+	rm out.npy
 	bend run main.bend 8
 	make show
 
 small-cu: small-input
+	rm out.npy
 	bend run-cu main.bend 8
 	make show
 
@@ -29,10 +33,12 @@ small-input: .venv
 		np.save('in.npy', np.random.normal(size=(32, 5)))"
 
 digits: digits-input
+	rm out.npy
 	bend run main.bend 15
 	make show
 
 digits-cu: digits-input
+	rm out.npy
 	bend run-cu main.bend 15
 	make show
 
