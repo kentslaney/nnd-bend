@@ -290,7 +290,7 @@ def apply_merge(k, tree, updates, index):
       (size, updates) = build_unwrap(updates, index)
       # set flag
       ins = Avl.from_sorted(AvlKey/Dual.from_q(updates, AvlData/Inert(1)))
-      return DirectAccess/Leaf(Avl.prune(Avl.union(tree.value, ins), 4))
+      return DirectAccess/Leaf(Avl.prune(Avl.union(tree.value, ins), k))
 
 def apply(k, data, tree, candidates):
   return apply_merge(k, tree, apply_(k, data, candidates), 0)
