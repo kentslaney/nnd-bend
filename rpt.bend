@@ -79,17 +79,21 @@ def degenerate(rng, data, size, args, j):
     (l, r) = (DirectAccess/Leaf(l), DirectAccess/Leaf(r))
     return DirectAccess/Node(j + side, l, r)
 
+def rp_split_(rng, ref, data, size):
+  (rng, first, second) = sample(rng, 0, size)
+  first = list_index(data, first)
+  second = list_index(data, second)
+  (delta, boundary) = hyperplane(first, second, ref)
+  (l, r) = lr_split(delta, boundary, data, ref)
+  return rng, l, r
+
 def rp_split(rng, data, args, j, prev):
   (*, *, goal_leaf_size, bound, ref) = args
   (size, data) = List/length(data)
   if size <= goal_leaf_size:
     return DirectAccess/Leaf(data)
   else:
-    (rng, first, second) = sample(rng, 0, size)
-    first = list_index(data, first)
-    second = list_index(data, second)
-    (delta, boundary) = hyperplane(first, second, ref)
-    (l, r) = lr_split(delta, boundary, data, ref)
+    rng, l, r = rp_split_(rng, ref, data, size)
     (side, l) = List/length(l)
     (fp_side, fp_size) = (u24/to_f24(side), u24/to_f24(size))
     if (side == 0) | (side == size) | (side == prev) | (side == size - prev):

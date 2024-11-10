@@ -43,6 +43,10 @@ def apply_rounds(v, r):
   v = apply_round(v, r2)
   return apply_round(v, r3)
 
+def threefry_(x0, x1, r, i, j, n):
+  (x0, x1) = apply_rounds((x0, x1), r)
+  return add(x0, i), add(add(x1, j), (0, n))
+
 def threefry2x32(k0, k1, x0, x1):
   (r0, r1) = ((13, 15, 26, 6), (17, 29, 16, 24))
   k2 = xor(xor(k0, k1), (0x1BD1, 0x1BDA))
@@ -50,25 +54,11 @@ def threefry2x32(k0, k1, x0, x1):
   x0 = add(x0, k0)
   x1 = add(x1, k1)
 
-  (x0, x1) = apply_rounds((x0, x1), r0)
-  x0 = add(x0, k1)
-  x1 = add(add(x1, k2), (0, 1))
-
-  (x0, x1) = apply_rounds((x0, x1), r1)
-  x0 = add(x0, k2)
-  x1 = add(add(x1, k0), (0, 2))
-
-  (x0, x1) = apply_rounds((x0, x1), r0)
-  x0 = add(x0, k0)
-  x1 = add(add(x1, k1), (0, 3))
-
-  (x0, x1) = apply_rounds((x0, x1), r1)
-  x0 = add(x0, k1)
-  x1 = add(add(x1, k2), (0, 4))
-
-  (x0, x1) = apply_rounds((x0, x1), r0)
-  x0 = add(x0, k2)
-  x1 = add(add(x1, k0), (0, 5))
+  x0, x1 = threefry_(x0, x1, r0, k1, k2, 1)
+  x0, x1 = threefry_(x0, x1, r1, k2, k0, 2)
+  x0, x1 = threefry_(x0, x1, r0, k0, k1, 3)
+  x0, x1 = threefry_(x0, x1, r1, k1, k2, 4)
+  x0, x1 = threefry_(x0, x1, r0, k2, k0, 5)
 
   return (x0, x1)
 
