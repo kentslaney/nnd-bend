@@ -247,33 +247,48 @@ def build(rng, tree, limit):
 def apply_dist(arr):
   return l2sq(arr)
 
-def apply_conv(data, self, others):
+def apply_conv(self, others):
   match others:
     case List/Nil:
       return List/Nil
     case List/Cons:
-      out = apply_dist(zip(self, DirectAccess.get(data, others.head)))
-      out = QueueData/Dual(out, others.head)
-      return List/Cons(out, apply_conv(data, self, others.tail))
+      match others.head:
+        case AvlKey/Single:
+          match others.head.data:
+            case AvlData/Inert:
+              out = apply_dist(zip(self, others.head.data.data))
+            case _:
+              out = *
+          out = QueueData/Dual(out, others.head.key)
+          return List/Cons(out, apply_conv(self, others.tail))
+        case _:
+          return *
 
-def apply_cross(k, data, pre, post):
+def apply_cross(k, pre, post):
   match pre:
     case List/Nil:
       return Avl/Leaf()
     case List/Cons:
-      rem = apply_cross(k, data, pre.tail, List/Cons(pre.head, post))
-      self = DirectAccess.get(data, pre.head)
-      self = apply_conv(data, self, List/concat(pre.tail, post))
-      self = AvlData/MinQueue(k, QueueData.limited_sort(k, self))
-      return Avl.insert(rem, AvlKey/Single(pre.head, self))
+      rem = apply_cross(k, pre.tail, List/Cons(pre.head, post))
+      match pre.head:
+        case AvlKey/Single:
+          match pre.head.data:
+            case AvlData/Inert:
+              self = apply_conv(pre.head.data.data, List/concat(pre.tail, post))
+            case _:
+              self = *
+          self = AvlData/MinQueue(k, QueueData.limited_sort(k, self))
+          return Avl.insert(rem, AvlKey/Single(pre.head.key, self))
+        case _:
+          return *
 
-def apply_(k, data, candidates):
+def apply_(k, candidates):
   match candidates:
     case DirectAccess/Node:
-      l, r = apply_(k, data, candidates.left), apply_(k, data, candidates.right)
+      l, r = apply_(k, candidates.left), apply_(k, candidates.right)
       return Avl.union(l, r)
     case DirectAccess/Leaf:
-      return apply_cross(k, data, candidates.value, [])
+      return apply_cross(k, candidates.value, [])
 
 def apply_merge(k, tree, updates, index):
   # tree: DA of AVLs holding AvlKey/Dual
@@ -292,51 +307,66 @@ def apply_merge(k, tree, updates, index):
       ins = Avl.from_sorted(AvlKey/Dual.from_q(updates, AvlData/Inert(1)))
       return DirectAccess/Leaf(Avl.prune(Avl.union(tree.value, ins), k))
 
-def apply(k, data, tree, candidates):
-  return apply_merge(k, tree, apply_(k, data, candidates), 0)
+def apply(k, tree, candidates):
+  return apply_merge(k, tree, apply_(k, candidates), 0)
 
-def bipartite_conv(data, self, others, except):
+def bipartite_conv(self, others, except):
   match others:
     case List/Nil:
       return List/Nil
     case List/Cons:
-      rem = bipartite_conv(data, self, others.tail, except)
-      if others.head == except:
-        return rem
-      else:
-        out = apply_dist(zip(self, DirectAccess.get(data, others.head)))
-        return List/Cons(QueueData/Dual(out, others.head), rem)
+      match others.head:
+        case AvlKey/Single:
+          rem = bipartite_conv(self, others.tail, except)
+          if others.head.key == except:
+            return rem
+          else:
+            match others.head.data:
+              case AvlData/Inert:
+                out = apply_dist(zip(self, others.head.data.data))
+              case _:
+                out = *
+            return List/Cons(QueueData/Dual(out, others.head.key), rem)
+        case _:
+          return *
 
-def bipartite_cross(k, data, set0, set1):
+def bipartite_cross(k, set0, set1):
   match set0:
     case List/Nil:
       return Avl/Leaf()
     case List/Cons:
-      rem = bipartite_cross(k, data, set0.tail, set1)
-      self = DirectAccess.get(data, set0.head)
-      self = bipartite_conv(data, self, set1, set0.head)
-      self = AvlData/MinQueue(k, QueueData.limited_sort(k, self))
-      return Avl.insert(rem, AvlKey/Single(set0.head, self))
+      match set0.head:
+        case AvlKey/Single:
+          rem = bipartite_cross(k, set0.tail, set1)
+          match set0.head.data:
+            case AvlData/Inert:
+              self = bipartite_conv(set0.head.data.data, set1, set0.head.key)
+            case _:
+              self = *
+          self = AvlData/MinQueue(k, QueueData.limited_sort(k, self))
+          return Avl.insert(rem, AvlKey/Single(set0.head.key, self))
+        case _:
+          return *
 
-def bipartite_(k, data, set0, set1):
+def bipartite_(k, set0, set1):
   match set0:
     case DirectAccess/Node:
       match set1:
         case DirectAccess/Leaf:
           return Avl/Leaf()
         case DirectAccess/Node:
-          l = bipartite_(k, data, set0.left, set1.left)
-          r = bipartite_(k, data, set0.right, set1.right)
+          l = bipartite_(k, set0.left, set1.left)
+          r = bipartite_(k, set0.right, set1.right)
           return Avl.union(l, r)
     case DirectAccess/Leaf:
       match set1:
         case DirectAccess/Node:
           return Avl/Leaf()
         case DirectAccess/Leaf:
-          return bipartite_cross(k, data, set0.value, set1.value)
+          return bipartite_cross(k, set0.value, set1.value)
 
-def bipartite(k, data, tree, set0, set1):
-  return apply_merge(k, tree, bipartite_(k, data, set0, set1), 0)
+def bipartite(k, tree, set0, set1):
+  return apply_merge(k, tree, bipartite_(k, set0, set1), 0)
 
 def reset_flag_(tree):
   match tree:

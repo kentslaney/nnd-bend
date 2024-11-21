@@ -1,4 +1,5 @@
 from avl import (Avl, Avl.insert, AvlKey, AvlData)
+from drt import (drt,)
 from rng import (split, graph)
 from rpt import (forest,)
 from nnd import (apply, bipartite, build, reset_flag)
@@ -39,13 +40,14 @@ def ann_(rng, data, points, k, candidates, delta, knn):
       return knn
     case List/Cons:
       lo, hi = build(rng.head, knn, k)
+      lo, hi = drt(lo, data), drt(hi, data)
       knn, count = reset_flag(knn)
       if count <= delta * k * points:
         return knn
       else:
-        knn = apply(k, data, knn, hi)
-        knn = bipartite(k, data, knn, lo, hi)
-        knn = bipartite(k, data, knn, hi, lo)
+        knn = apply(k, knn, hi)
+        knn = bipartite(k, knn, lo, hi)
+        knn = bipartite(k, knn, hi, lo)
         return ann_(rng.tail, data, points, k, candidates, delta, knn)
 
 def ann_retype_(tree):
@@ -77,7 +79,7 @@ def ann_custom(rng, data, k, candidates, n_iter, delta, n_trees):
     knn = map_mat_avl(graph(rng, points, k), data, 0)
   else:
     init = forest(rng, data, n_trees, 30, 0.75)
-    knn = apply(k, data, mt(points), DirectAccess.create(init))
+    knn = apply(k, mt(points), drt(DirectAccess.create(init), data))
   knn = ann_(subkeys, data, points, k, candidates, delta, knn)
   return DirectAccess.to_list(ann_retype(knn))
 

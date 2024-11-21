@@ -1,3 +1,5 @@
+# TODO: index doesn't need to be stored if the size is stored in a container
+# TODO: the Map builtin might mesh with Avl better
 type DirectAccess: # < index goes left
   Node { index, ~left, ~right }
   Leaf { value }

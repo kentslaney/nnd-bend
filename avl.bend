@@ -192,13 +192,6 @@ def Avl.repr_key(rtl, key, height):
       rtl = Avl.repr_floats(rtl, QueueData.map(data.values))
       rtl = String/Cons(' ', rtl)
       rtl = Avl.repr_ints(rtl, QueueData.values(data.values))
-    case AvlData/Inert:
-      if data.data == 0:
-        rtl = String/Cons('0', rtl)
-      elif data.data == 1:
-        rtl = String/Cons('1', rtl)
-      else:
-        rtl = String/Cons('*', rtl)
     case _:
       rtl = String/Cons('*', rtl)
   rtl = String/Cons(' ', String/Cons('|', String/Cons(' ', rtl)))
@@ -781,6 +774,7 @@ type OptionalKey:
   Some { value }
   None
 
+# TODO: this shouldn't be necessary
 def Avl.count(tree):
   match tree:
     case Avl/Leaf:
